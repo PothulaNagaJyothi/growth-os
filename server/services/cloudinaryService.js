@@ -33,7 +33,7 @@ exports.uploadBuffer = (fileBuffer, fileName) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'growth-os-knowledge',
-          resource_type: 'raw', // Support raw documents (docx, pdf, txt)
+          resource_type: 'auto', // Auto-detect format (image or raw doc)
           public_id: `${Date.now()}_${path.parse(fileName).name}`,
         },
         (error, result) => {
@@ -81,11 +81,13 @@ exports.uploadBuffer = (fileBuffer, fileName) => {
  * Deletes a file asset from Cloudinary or local uploads folder
  * @param {String} publicId - Sourced asset key metadata
  */
-exports.deleteAsset = async (publicId) => {
+exports.deleteAsset = async (publicId, resourceType) => {
   if (hasCloudinary) {
     try {
-      await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
-      logger.info(`Successfully deleted Cloudinary raw asset: ${publicId}`);
+      const isRaw = resourceType === 'raw' || (publicId && /\.(pdf|docx|txt|doc|xls|xlsx|csv|pptx|ppt)$/i.test(publicId));
+      const rType = isRaw ? 'raw' : 'image';
+      await cloudinary.uploader.destroy(publicId, { resource_type: rType });
+      logger.info(`Successfully deleted Cloudinary ${rType} asset: ${publicId}`);
     } catch (error) {
       logger.error(`Cloudinary Delete Error: ${error.message}`);
     }
