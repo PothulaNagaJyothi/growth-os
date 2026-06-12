@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Heart, Bookmark, MessageSquare, Share2, Award, Zap } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const DevToPreview = ({ title, copy, hashtags }) => {
+export const DevToPreview = ({ title, copy, hashtags, imageUrl }) => {
   const [likes, setLikes] = useState(128);
   const [liked, setLiked] = useState(false);
   const [unicorns, setUnicorns] = useState(42);
@@ -31,13 +31,19 @@ export const DevToPreview = ({ title, copy, hashtags }) => {
 
   return (
     <div className="glass-card rounded-3xl border border-white/5 max-w-2xl mx-auto overflow-hidden bg-[#0F141C]/95 text-left shadow-2xl">
-      {/* Top Banner Cover Image Placeholder */}
-      <div className="h-32 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-primary/20 border-b border-white/5 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
-          <Zap size={14} className="text-primary animate-pulse" />
-          <span>Dev.to Developer Community Publication Simulator</span>
+      {/* Top Banner Cover Image */}
+      {imageUrl ? (
+        <div className="bg-slate-900 border-b border-white/5 select-none flex items-center justify-center">
+          <img src={imageUrl} alt="Dev.to cover" className="w-full h-auto object-contain block" />
         </div>
-      </div>
+      ) : (
+        <div className="h-32 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-primary/20 border-b border-white/5 flex items-center justify-center select-none">
+          <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
+            <Zap size={14} className="text-primary animate-pulse" />
+            <span>Dev.to Developer Community Publication Simulator</span>
+          </div>
+        </div>
+      )}
 
       <div className="p-6 md:p-8 space-y-6">
         {/* Author Metadata Header */}

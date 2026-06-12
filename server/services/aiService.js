@@ -24,7 +24,7 @@ class AIService {
       throw new Error('Azure OpenAI credentials are missing from the environment configuration.');
     }
 
-    const apiVersion = '2023-05-15';
+    const apiVersion = options.apiVersion || '2023-05-15';
     const url = `${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`;
 
     const requestData = {
@@ -33,6 +33,11 @@ class AIService {
       max_tokens: options.max_tokens ?? 2000,
       ...options,
     };
+
+    if (requestData.max_completion_tokens) {
+      delete requestData.max_tokens;
+    }
+    delete requestData.apiVersion;
 
     let attempt = 0;
     const maxAttempts = 5;
@@ -686,6 +691,119 @@ Generate visual outline now:`;
         ],
         visualDirection: "Visual layout: Keep colors aligned with dark cyan glassmorphism styles, dark blue (#0A0F1D) canvas bases, and glowing secondary magenta highlights."
       };
+    }
+  }
+
+  async generateBrandedImagePrompt({ blog, company, campaign, persona, platform }) {
+    const brandVoice = company?.brandVoice || '';
+    const industry = company?.industry || '';
+    const productDesc = company?.productDescription || '';
+    const personaName = persona?.personaName || '';
+    const personaTone = persona?.tone || '';
+    const personaDesc = persona?.description || '';
+    const topic = campaign?.topic || blog.title;
+
+    const hasLogo = company?.logo && (company.logo.startsWith('data:image/') || company.logo.startsWith('http://') || company.logo.startsWith('https://'));
+
+    if (hasLogo) {
+      const systemPrompt = `You are a Visual Creative Director and AI Prompt Designer.
+Your task is to generate a single, highly optimized visual prompt for DALL-E.
+The visual must represent the blog post topic, styled specifically to match the company's branding colors and design details from their logo, and tailored to appeal to the target persona.
+
+Company Details:
+- Name: ${company?.companyName || 'N/A'}
+- Industry: ${industry}
+- Product Description: ${productDesc}
+- Brand Voice: ${brandVoice}
+
+Persona Details:
+- Name: ${personaName}
+- Tone: ${personaTone}
+- Description: ${personaDesc}
+
+Platform: ${platform || 'General'}
+
+Requirements for the DALL-E prompt:
+1. Extract and incorporate visual design elements, artistic style, and a primary color palette (using specific hex codes or color descriptions) derived directly from the attached company logo image.
+2. The design style must match the target persona's preferences (e.g. professional and educational, or technical and clean).
+3. Do NOT include any text, typography, letters, logos, or words in the image. DALL-E must generate a pure background/illustration/graphic design.
+4. Output only the prompt string. Do not wrap in JSON or markdown.
+5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", if "${platform}" is LinkedIn, specify a square (1:1 aspect ratio) composition with subjects centered. If "${platform}" is Medium, Substack, Dev.to, or Company Blog, specify a wide landscape (16:9 aspect ratio) composition.`;
+
+      const userContent = [
+        {
+          type: 'text',
+          text: `Analyze the attached company logo to identify its color scheme and design characteristics, then create a highly descriptive DALL-E cover image prompt for this blog post. The prompt must explicitly specify the style and color palette to match the logo and the target persona's tone:
+TITLE: ${blog.title}
+SUMMARY: ${blog.metaDescription || 'N/A'}
+TOPIC: ${topic}
+PLATFORM: ${platform || 'General'}`
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: company.logo
+          }
+        }
+      ];
+
+      try {
+        console.log('[AI SERVICE] Generating branded prompt using Vision payload with company logo...');
+        const responseText = await this.queryAI([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ], {
+          temperature: 0.7,
+          max_completion_tokens: 300,
+          apiVersion: '2024-02-15-preview'
+        });
+        if (responseText && responseText.trim().length > 0) {
+          return responseText.trim();
+        }
+      } catch (err) {
+        console.warn('[AI SERVICE WARNING] generateBrandedImagePrompt vision call failed, falling back to text-only generation.', err.message);
+      }
+    }
+
+    const systemPrompt = `You are a Visual Creative Director and AI Prompt Designer.
+Your task is to generate a single, highly optimized visual prompt for DALL-E.
+The visual must represent the blog post topic, but styled specifically for the company's branding colors and guidelines, and tailored to appeal to the target persona.
+
+Company Details:
+- Name: ${company?.companyName || 'N/A'}
+- Industry: ${industry}
+- Product Description: ${productDesc}
+- Brand Voice: ${brandVoice}
+
+Persona Details:
+- Name: ${personaName}
+- Tone: ${personaTone}
+- Description: ${personaDesc}
+
+Platform: ${platform || 'General'}
+
+Requirements for the DALL-E prompt:
+1. Incorporate visual design elements and colors that match the company's industry and brand voice (e.g. if EdTech/UDEN, use professional learning, career growth, teals/blues/purples color palette).
+2. The design style must match the target persona's preferences (e.g. professional and educational, or technical and clean).
+3. Do NOT include any text, typography, letters, logos, or words in the image.
+4. Output only the prompt string. Do not wrap in JSON or markdown.
+5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", if "${platform}" is LinkedIn, specify a square (1:1 aspect ratio) composition with subjects centered. If "${platform}" is Medium, Substack, Dev.to, or Company Blog, specify a wide landscape (16:9 aspect ratio) composition.`;
+
+    const userPrompt = `Create a DALL-E image prompt for a blog post:
+TITLE: ${blog.title}
+SUMMARY: ${blog.metaDescription || 'N/A'}
+TOPIC: ${topic}
+PLATFORM: ${platform || 'General'}`;
+
+    try {
+      const responseText = await this.queryAI([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ], { temperature: 0.7, max_tokens: 300 });
+      return responseText.trim();
+    } catch (err) {
+      console.warn('[AI SERVICE] generateBrandedImagePrompt failed, fallback to default', err.message);
+      return `Minimalist 3D isometric vector illustration depicting ${topic}, professional cyan and teal highlights, suited for ${industry}, no text.`;
     }
   }
 

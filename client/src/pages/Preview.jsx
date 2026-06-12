@@ -19,7 +19,8 @@ import {
   Share2,
   Mail,
   ArrowLeft,
-  Download
+  Download,
+  Image as ImageIcon
 } from 'lucide-react';
 import { LinkedInPreview } from '../components/previews/LinkedInPreview';
 import { MediumPreview } from '../components/previews/MediumPreview';
@@ -137,6 +138,98 @@ export const Preview = () => {
     retry: false
   });
 
+  const { data: blogImages, refetch: refetchImages } = useQuery({
+    queryKey: ['images', blogRecord?._id],
+    queryFn: async () => {
+      if (!blogRecord?._id) return [];
+      const response = await api.get(`/images/${blogRecord._id}`);
+      return response.data.data || [];
+    },
+    enabled: !!blogRecord?._id
+  });
+
+  const coverImageTaskId = blogRecord?._id && activeTab ? `preview_image_generate_${blogRecord._id}_${activeTab}` : null;
+
+  // Sync background cover image generation task
+  useEffect(() => {
+    if (!coverImageTaskId) return;
+    const task = tasks[coverImageTaskId];
+    if (task) {
+      if (task.status === 'success') {
+        queryClient.invalidateQueries({ queryKey: ['images', blogRecord?._id] });
+        triggerToast('Cover image generated successfully!');
+        clearTask(coverImageTaskId);
+      } else if (task.status === 'error') {
+        const err = task.error;
+        console.error(err);
+        triggerToast(err.response?.data?.error || 'Cover image generation failed.', 'error');
+        clearTask(coverImageTaskId);
+      }
+    }
+  }, [tasks, coverImageTaskId, blogRecord?._id, queryClient, clearTask]);
+
+  const getPlatformDimensions = () => {
+    if (activeTab === 'linkedin') return '1024x1024';
+    return '1792x1024';
+  };
+
+  const handleGenerateCoverImage = () => {
+    if (!blogRecord?._id || !coverImageTaskId) return;
+    const dimensions = getPlatformDimensions();
+    startTask(coverImageTaskId, async () => {
+      const response = await api.post('/images/generate', {
+        blogId: blogRecord._id,
+        dimensions,
+        platform: resolvedPlatformName || 'Canonical'
+      });
+      return response.data.data;
+    });
+  };
+
+  const getCoverImageForPlatform = () => {
+    if (!blogImages || blogImages.length === 0) return null;
+    // Sort descending by creation timestamp to always prefer the latest generated image
+    const sortedImages = [...blogImages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const targetDim = getPlatformDimensions();
+    const matchingImg = sortedImages.find(img => img.dimensions === targetDim);
+    if (matchingImg) return matchingImg.imageUrl;
+    if (targetDim === '1792x1024') {
+      const anyLandscape = sortedImages.find(img => img.dimensions === '1792x1024' || img.dimensions === 'custom');
+      if (anyLandscape) return anyLandscape.imageUrl;
+    } else {
+      const anySquare = sortedImages.find(img => img.dimensions === '1024x1024');
+      if (anySquare) return anySquare.imageUrl;
+    }
+    return sortedImages[0].imageUrl;
+  };
+
+  const coverImage = getCoverImageForPlatform();
+  const resolvedCoverImageUrl = coverImage
+    ? (coverImage.startsWith('/uploads') ? `http://localhost:4000${coverImage}` : coverImage)
+    : null;
+
+  const handleDownloadCoverImage = async () => {
+    if (!resolvedCoverImageUrl) return;
+    try {
+      const response = await fetch(resolvedCoverImageUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const extension = resolvedCoverImageUrl.split('.').pop().split('?')[0] || 'png';
+      link.setAttribute("download", `cover_image_${activeTab}_${blogRecord?.slug || 'post'}.${extension}`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      triggerToast('Cover image downloaded successfully!');
+    } catch (err) {
+      console.error('Failed to download cover image: ', err);
+      window.open(resolvedCoverImageUrl, '_blank');
+      triggerToast('Opened image in new tab.');
+    }
+  };
+
   const adaptTaskId = blogRecord?._id && activeTab ? `preview_adapt_${blogRecord._id}_${activeTab}` : null;
 
   // Sync background platform adaptation task
@@ -195,8 +288,14 @@ export const Preview = () => {
   const handleCopy = async () => {
     if (activeTab === 'canonical') {
       if (!blogRecord) return;
-      const plainText = `# ${blogRecord.title}\n\n${blogRecord.content}`;
-      const htmlText = `<h1>${blogRecord.title}</h1>\n${renderMarkdownToHTML(blogRecord.content)}`;
+      let plainText = `# ${blogRecord.title}\n\n`;
+      let htmlText = `<h1>${blogRecord.title}</h1>\n`;
+      if (resolvedCoverImageUrl) {
+        plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+        htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
+      }
+      plainText += blogRecord.content;
+      htmlText += renderMarkdownToHTML(blogRecord.content);
       await copyToClipboard(plainText, htmlText);
     } else {
       if (!renderedRecord) return;
@@ -206,21 +305,35 @@ export const Preview = () => {
 
       if (activeTab === 'linkedin') {
         if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
+        if (resolvedCoverImageUrl) plainText += `[Image Attachment: ${resolvedCoverImageUrl}]\n\n`;
         plainText += renderedRecord.copy;
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
-        plainText = `# ${titleText}\n\n${renderedRecord.copy}`;
-        htmlText = `<h1>${titleText}</h1>\n${renderMarkdownToHTML(renderedRecord.copy)}`;
+        plainText = `# ${titleText}\n\n`;
+        htmlText = `<h1>${titleText}</h1>\n`;
+        if (resolvedCoverImageUrl) {
+          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+          htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
+        }
+        plainText += renderedRecord.copy;
+        htmlText += renderMarkdownToHTML(renderedRecord.copy);
       } else if (activeTab === 'devto') {
         const titleText = renderedRecord.title || blogRecord.title;
-        plainText = `# ${titleText}\n\n${renderedRecord.copy}`;
-        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
-          plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
+        plainText = `# ${titleText}\n\n`;
+        htmlText = `<h1>${titleText}</h1>\n`;
+        if (resolvedCoverImageUrl) {
+          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+          htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
         }
-        htmlText = `<h1>${titleText}</h1>\n${renderMarkdownToHTML(renderedRecord.copy)}`;
+        let copyWithTags = renderedRecord.copy;
+        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
+          copyWithTags += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
+        }
+        plainText += copyWithTags;
+        htmlText += renderMarkdownToHTML(copyWithTags);
       }
 
       await copyToClipboard(plainText, htmlText);
@@ -233,7 +346,11 @@ export const Preview = () => {
 
     if (activeTab === 'canonical') {
       if (!blogRecord) return;
-      plainText = `# ${blogRecord.title}\n\n${blogRecord.content}`;
+      plainText = `# ${blogRecord.title}\n\n`;
+      if (resolvedCoverImageUrl) {
+        plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+      }
+      plainText += blogRecord.content;
       filename = `${blogRecord.slug || 'canonical'}.md`;
     } else {
       if (!renderedRecord) return;
@@ -241,6 +358,7 @@ export const Preview = () => {
 
       if (activeTab === 'linkedin') {
         if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
+        if (resolvedCoverImageUrl) plainText += `[Image Attachment: ${resolvedCoverImageUrl}]\n\n`;
         plainText += renderedRecord.copy;
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
@@ -248,11 +366,19 @@ export const Preview = () => {
         filename = `linkedin_${slugName}.txt`;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
-        plainText = `# ${titleText}\n\n${renderedRecord.copy}`;
+        plainText = `# ${titleText}\n\n`;
+        if (resolvedCoverImageUrl) {
+          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+        }
+        plainText += renderedRecord.copy;
         filename = `${activeTab}_${slugName}.md`;
       } else if (activeTab === 'devto') {
         const titleText = renderedRecord.title || blogRecord.title;
-        plainText = `# ${titleText}\n\n${renderedRecord.copy}`;
+        plainText = `# ${titleText}\n\n`;
+        if (resolvedCoverImageUrl) {
+          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+        }
+        plainText += renderedRecord.copy;
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
@@ -412,6 +538,7 @@ export const Preview = () => {
 </head>
 <body>
   <h1>${titleText}</h1>
+  ${resolvedCoverImageUrl ? `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />` : ''}
   ${bodyHtml}
 </body>
 </html>`;
@@ -621,6 +748,61 @@ export const Preview = () => {
                 })}
               </div>
 
+              {/* Cover Image Assistant Panel */}
+              <div className="glass-card rounded-2xl border border-white/5 p-4 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.02] select-none">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary relative overflow-hidden shrink-0 select-none">
+                    {resolvedCoverImageUrl ? (
+                      <img src={resolvedCoverImageUrl} alt="Cover preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={20} className="text-slate-500" />
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                      <span>Cover Image Assistant</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 font-mono font-medium lowercase">
+                        {getPlatformDimensions()}
+                      </span>
+                    </h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {resolvedCoverImageUrl
+                        ? `Loaded cover visual for this campaign/platform. Will embed in downloaded files.`
+                        : `No tailored cover image found. Generate one matching active platform rules.`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="shrink-0 flex items-center gap-2">
+                  {resolvedCoverImageUrl && (
+                    <button
+                      onClick={handleDownloadCoverImage}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 hover:border-white/20 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Download size={13} />
+                      <span>Download Image</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleGenerateCoverImage}
+                    disabled={coverImageTaskId && tasks[coverImageTaskId]?.status === 'running'}
+                    className="px-4 py-2 bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 text-primary border border-primary/20 hover:border-primary/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-glow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    {coverImageTaskId && tasks[coverImageTaskId]?.status === 'running' ? (
+                      <>
+                        <Loader2 className="animate-spin" size={13} />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={13} />
+                        <span>{resolvedCoverImageUrl ? 'Regenerate Branded Cover' : 'Generate Branded Cover'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* Tab Display Area */}
               <div className="min-h-[480px]">
                 {/* 1. CANONICAL PREVIEW TAB */}
@@ -658,6 +840,12 @@ export const Preview = () => {
                         </button>
                       </div>
                     </div>
+                    
+                    {resolvedCoverImageUrl && (
+                      <div className="w-full rounded-2xl overflow-hidden border border-white/5 max-h-[300px] bg-slate-950 select-none mb-6">
+                        <img src={resolvedCoverImageUrl} alt="Canonical Cover" className="w-full h-full object-cover" />
+                      </div>
+                    )}
                     
                     {/* Scrollable Markdown preview */}
                     <div 
@@ -775,6 +963,7 @@ export const Preview = () => {
                             title={renderedRecord.title}
                             copy={renderedRecord.copy}
                             hashtags={renderedRecord.hashtags}
+                            imageUrl={resolvedCoverImageUrl}
                           />
                         )}
 
@@ -783,6 +972,7 @@ export const Preview = () => {
                           <MediumPreview
                             title={renderedRecord.title}
                             copy={renderedRecord.copy}
+                            imageUrl={resolvedCoverImageUrl}
                           />
                         )}
 
@@ -791,6 +981,7 @@ export const Preview = () => {
                           <CompanyBlogPreview
                             title={renderedRecord.title}
                             copy={renderedRecord.copy}
+                            imageUrl={resolvedCoverImageUrl}
                           />
                         )}
 
@@ -800,6 +991,7 @@ export const Preview = () => {
                             title={renderedRecord.title}
                             copy={renderedRecord.copy}
                             hashtags={renderedRecord.hashtags}
+                            imageUrl={resolvedCoverImageUrl}
                           />
                         )}
 
@@ -808,6 +1000,7 @@ export const Preview = () => {
                           <SubstackPreview
                             title={renderedRecord.title}
                             copy={renderedRecord.copy}
+                            imageUrl={resolvedCoverImageUrl}
                           />
                         )}
                       </div>

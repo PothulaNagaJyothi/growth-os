@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ArrowUpRight, Check, Heart, MessageSquare, Share2 } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const CompanyBlogPreview = ({ title, copy }) => {
+export const CompanyBlogPreview = ({ title, copy, imageUrl }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [likes, setLikes] = useState(42);
@@ -51,6 +51,11 @@ export const CompanyBlogPreview = ({ title, copy }) => {
         
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed max-h-[360px] overflow-y-auto pr-2 scrollbar-glass">
+          {imageUrl && (
+            <div className="my-3 rounded-2xl overflow-hidden border border-white/5 bg-slate-950 select-none">
+              <img src={imageUrl} alt="Cover" className="w-full h-auto object-contain block" />
+            </div>
+          )}
           {copy ? (
             <div 
               className="text-xs md:text-sm text-slate-300 leading-relaxed"

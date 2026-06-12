@@ -33,9 +33,29 @@ exports.generateImage = async (req, res, next) => {
     // 2. Resolve or generate prompt dynamically
     let resolvedPrompt = prompt;
     if (!resolvedPrompt) {
-      console.log('[IMAGE CONTROLLER] Prompt missing. Generating prompt dynamically from blog title...');
-      const promptsData = await aiService.generateImagePrompts(blog, 'Modern technology illustrative artwork');
-      resolvedPrompt = promptsData.prompts?.[0] || `Modern illustrative artwork for ${blog.title}`;
+      console.log('[IMAGE CONTROLLER] Prompt missing. Generating prompt dynamically using branding details...');
+      const Company = require('../models/Company');
+      const Campaign = require('../models/Campaign');
+      const Persona = require('../models/Persona');
+
+      const company = await Company.findById(req.user.companyId);
+      let campaign = null;
+      let persona = null;
+
+      if (blog.campaignId) {
+        campaign = await Campaign.findById(blog.campaignId);
+        if (campaign && campaign.personaId) {
+          persona = await Persona.findById(campaign.personaId);
+        }
+      }
+
+      resolvedPrompt = await aiService.generateBrandedImagePrompt({
+        blog,
+        company,
+        campaign,
+        persona,
+        platform: req.body.platform || 'General'
+      });
     }
 
     // 3. Dispatch image generation to DALL-E via AIService
@@ -149,12 +169,59 @@ exports.getImagesByBlog = async (req, res, next) => {
     const images = await ImageMetadata.find({
       companyId: req.user.companyId,
       blogId,
-    });
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: images.length,
       data: images,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Suggest branded prompt for DALL-E based on company & persona context
+// @route   POST /api/images/suggest-prompt
+// @access  Private
+exports.suggestPrompt = async (req, res, next) => {
+  try {
+    const { blogId, platform = 'General' } = req.body;
+    if (!blogId) {
+      return res.status(400).json({ success: false, error: 'Blog ID is required' });
+    }
+
+    const Company = require('../models/Company');
+    const Campaign = require('../models/Campaign');
+    const Persona = require('../models/Persona');
+
+    const blog = await Blog.findById(blogId);
+    if (!blog) {
+      return res.status(404).json({ success: false, error: 'Parent blog not found' });
+    }
+
+    const company = await Company.findById(req.user.companyId);
+    let campaign = null;
+    let persona = null;
+
+    if (blog.campaignId) {
+      campaign = await Campaign.findById(blog.campaignId);
+      if (campaign && campaign.personaId) {
+        persona = await Persona.findById(campaign.personaId);
+      }
+    }
+
+    const suggestedPrompt = await aiService.generateBrandedImagePrompt({
+      blog,
+      company,
+      campaign,
+      persona,
+      platform
+    });
+
+    res.status(200).json({
+      success: true,
+      data: suggestedPrompt
     });
   } catch (error) {
     next(error);

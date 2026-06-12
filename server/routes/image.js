@@ -5,6 +5,7 @@ const {
   generateImage,
   uploadImage,
   getImagesByBlog,
+  suggestPrompt,
 } = require('../controllers/imageController');
 const { protect } = require('../middleware/auth');
 
@@ -34,6 +35,7 @@ const upload = multer({
 router.use(protect);
 
 router.post('/generate', generateImage);
+router.post('/suggest-prompt', suggestPrompt);
 router.post('/upload', upload.single('image'), uploadImage);
 router.get('/:blogId', getImagesByBlog);
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Heart, MessageSquare, Share2, Mail, Check, ArrowUpRight } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const SubstackPreview = ({ title, copy }) => {
+export const SubstackPreview = ({ title, copy, imageUrl }) => {
   const [likes, setLikes] = useState(89);
   const [liked, setLiked] = useState(false);
   const [email, setEmail] = useState('');
@@ -55,6 +55,12 @@ export const SubstackPreview = ({ title, copy }) => {
           <span className="text-slate-400">Grounded SaaS Insights and Scaling Metrics</span>
         </div>
       </div>
+
+      {imageUrl && (
+        <div className="my-4 rounded-xl overflow-hidden border border-white/5 bg-slate-950 select-none">
+          <img src={imageUrl} alt="Substack cover" className="w-full h-auto object-contain block" />
+        </div>
+      )}
 
       {/* Action Toolbar Top */}
       <div className="border-t border-b border-white/5 py-2.5 flex items-center justify-between text-xs text-slate-400 font-mono">

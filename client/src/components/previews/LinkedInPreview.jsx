@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ThumbsUp, MessageSquare, Repeat2, Send, Share2, Heart } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const LinkedInPreview = ({ title, copy, hashtags = [] }) => {
+export const LinkedInPreview = ({ title, copy, hashtags = [], imageUrl }) => {
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(148);
   const [showAllText, setShowAllText] = useState(false);
@@ -85,6 +85,12 @@ export const LinkedInPreview = ({ title, copy, hashtags = [] }) => {
           </div>
         )}
       </div>
+
+      {imageUrl && (
+        <div className="border-t border-b border-white/5 bg-slate-950 select-none flex items-center justify-center">
+          <img src={imageUrl} alt="LinkedIn post media" className="w-full h-auto object-contain block" />
+        </div>
+      )}
 
       {/* Mock Social Telemetries Bar */}
       <div className="px-4 py-2.5 border-t border-b border-white/5 flex items-center justify-between text-[10px] text-slate-400">

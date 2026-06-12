@@ -144,10 +144,18 @@ export const ImageStudio = () => {
   });
 
   // Action: Suggest visual prompt based on campaign context
-  const handleSuggestPrompt = () => {
-    if (!activeCampaign) return;
-    const suggested = `A clean, minimalist 3D isometric vector illustration depicting "${activeCampaign.topic}" converging in server hubs, high-tech cyan and electric blue glowing highlights, dark premium enterprise visual look, wide-angle screen ratio, no text.`;
-    setPrompt(suggested);
+  const handleSuggestPrompt = async () => {
+    if (!blogRecord?._id) return;
+    try {
+      triggerToast('Generating tailored prompt...');
+      const response = await api.post('/images/suggest-prompt', { blogId: blogRecord._id });
+      setPrompt(response.data.data);
+      triggerToast('Branded prompt suggested successfully!');
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to suggest prompt. Using default fallback.');
+      setPrompt(`A clean, minimalist 3D isometric vector illustration depicting "${activeCampaign?.topic || 'topic'}", no text.`);
+    }
   };
 
   // Helper to determine snaps/dimensions

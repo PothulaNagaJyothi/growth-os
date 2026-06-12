@@ -34,7 +34,9 @@ connectDB().then(() => {
 const app = express();
 
 // Security and utility Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
   origin: '*', // Adjust under production
   credentials: true,
