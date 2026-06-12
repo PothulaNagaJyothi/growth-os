@@ -1,0 +1,42 @@
+const mongoose = require('mongoose');
+
+const RenderedBlogSchema = new mongoose.Schema(
+  {
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: true,
+    },
+    blogId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Blog',
+      required: true,
+    },
+    platformName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+    copy: {
+      type: String,
+      default: '',
+    },
+    hashtags: {
+      type: [String],
+      default: [],
+    },
+    metaDescription: {
+      type: String,
+      default: '',
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model('RenderedBlog', RenderedBlogSchema);

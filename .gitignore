@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment Variables
+.env
+server/.env
+
+# Build outputs
+dist/
+client/dist/
+.vite/
+
+# Local/uploaded media
+server/uploads/*
+!server/uploads/.gitkeep
+
+# System and logs
+*.log
+.DS_Store
+.vscode/
+.idea/
