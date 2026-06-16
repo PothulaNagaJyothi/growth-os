@@ -26,7 +26,7 @@ export const BlogCard = ({ entry }) => {
   return (
     <button
       type="button"
-      onClick={() => entry?._id && navigate(`/blog-studio/${entry._id}`)}
+      onClick={() => entry?._id && navigate(`/blogs?view=edit&id=${entry._id}`)}
       className="w-full rounded-2xl border border-white/8 bg-white/5 p-4 text-left shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white/8 focus:outline-none focus:ring-2 focus:ring-primary/40"
     >
       <div className="flex items-start justify-between gap-3">

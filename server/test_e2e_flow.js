@@ -19,7 +19,7 @@ console.log(`Targeting active API gateway: ${baseURL}\n`);
 async function runE2E() {
   let token = null;
   let personaId = null;
-  let campaignId = null;
+  let topicId = null;
   let blogId = null;
   let platformBlogId = null;
   let scheduleId = null;
@@ -64,14 +64,14 @@ async function runE2E() {
     }
 
     // ----------------------------------------------------
-    // Test 3: Create Campaign
+    // Test 3: Create Topic
     // ----------------------------------------------------
-    console.log('\n[STEP 3] Launching Campaign Context...');
-    const campaignRes = await axios.post(
-      `${baseURL}/campaigns`,
+    console.log('\n[STEP 3] Launching Topic Context...');
+    const topicRes = await axios.post(
+      `${baseURL}/topics`,
       {
         personaId,
-        campaignName: 'Kubernetes Pod Autoscaler Optimization',
+        topicName: 'Kubernetes Pod Autoscaler Optimization',
         topic: 'Horizontal Pod Autoscaling (HPA) using custom Prometheus metrics',
         keywords: ['Kubernetes HPA', 'Prometheus metrics query', 'scale-up latency'],
         platforms: ['LinkedIn', 'Medium'],
@@ -83,11 +83,11 @@ async function runE2E() {
       }
     );
 
-    if (campaignRes.data && campaignRes.data.success) {
-      campaignId = campaignRes.data.data._id;
-      console.log(`  -> SUCCESS: Campaign established (ID: ${campaignId}).`);
+    if (topicRes.data && topicRes.data.success) {
+      topicId = topicRes.data.data._id;
+      console.log(`  -> SUCCESS: Topic established (ID: ${topicId}).`);
     } else {
-      throw new Error('Campaign creation failed.');
+      throw new Error('Topic creation failed.');
     }
 
     // ----------------------------------------------------
@@ -96,7 +96,7 @@ async function runE2E() {
     console.log('\n[STEP 4] Running Grounded Research Engine Synthesis...');
     const researchRes = await axios.post(
       `${baseURL}/research/generate`,
-      { campaignId },
+      { topicId },
       {
         headers: { Authorization: `Bearer ${token}` }
       }
@@ -115,7 +115,7 @@ async function runE2E() {
     console.log('\n[STEP 5] Generating Canonical Blog Post...');
     const blogRes = await axios.post(
       `${baseURL}/blogs/generate`,
-      { campaignId },
+      { topicId },
       {
         headers: { Authorization: `Bearer ${token}` }
       }

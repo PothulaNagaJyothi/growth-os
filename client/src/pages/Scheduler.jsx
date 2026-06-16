@@ -23,7 +23,7 @@ export const Scheduler = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 5, 4)); // Default to June 2026 matching local system context (2026-06-04)
   
   // Selection and Form States
-  const [selectedCampaignId, setSelectedCampaignId] = useState('');
+  const [selectedTopicId, setSelectedTopicId] = useState('');
   const [selectedPlatformBlogId, setSelectedPlatformBlogId] = useState('');
   const [scheduleDateStr, setScheduleDateStr] = useState('2026-06-04');
   const [scheduleTimeStr, setScheduleTimeStr] = useState('12:00');
@@ -37,29 +37,29 @@ export const Scheduler = () => {
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  // 1. Fetch campaigns
-  const { data: campaigns, isLoading: campaignsLoading } = useQuery({
-    queryKey: ['campaigns'],
+  // 1. Fetch topics
+  const { data: topics, isLoading: topicsLoading } = useQuery({
+    queryKey: ['topics'],
     queryFn: async () => {
-      const response = await api.get('/campaigns');
+      const response = await api.get('/topics');
       return response.data.data;
     }
   });
 
-  // Pre-select first campaign
+  // Pre-select first topic
   useEffect(() => {
-    if (campaigns && campaigns.length > 0 && !selectedCampaignId) {
-      setSelectedCampaignId(campaigns[0]._id);
+    if (topics && topics.length > 0 && !selectedTopicId) {
+      setSelectedTopicId(topics[0]._id);
     }
-  }, [campaigns, selectedCampaignId]);
+  }, [topics, selectedTopicId]);
 
-  // 2. Fetch canonical blog for selected campaign
+  // 2. Fetch canonical blog for selected topic
   const { data: blogRecord, isLoading: blogLoading } = useQuery({
-    queryKey: ['blog', selectedCampaignId],
+    queryKey: ['blog', selectedTopicId],
     queryFn: async () => {
-      if (!selectedCampaignId) return null;
+      if (!selectedTopicId) return null;
       try {
-        const response = await api.get(`/blogs/campaign/${selectedCampaignId}`);
+        const response = await api.get(`/blogs/topic/${selectedTopicId}`);
         return response.data.data;
       } catch (err) {
         const is404 =
@@ -76,7 +76,7 @@ export const Scheduler = () => {
         throw err;
       }
     },
-    enabled: !!selectedCampaignId,
+    enabled: !!selectedTopicId,
     retry: false
   });
 
@@ -224,7 +224,7 @@ export const Scheduler = () => {
     setScheduleDateStr(dateStr);
   };
 
-  const activeCampaign = campaigns?.find((c) => c._id === selectedCampaignId);
+  const activeTopic = topics?.find((c) => c._id === selectedTopicId);
 
   return (
     <div className="space-y-6 relative">
@@ -369,27 +369,27 @@ export const Scheduler = () => {
 
             <form onSubmit={handleScheduleSubmit} className="space-y-4">
               
-              {/* Campaign Dropdown */}
+              {/* Topic Dropdown */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
                   <Megaphone size={12} />
-                  <span>Campaign Context</span>
+                  <span>Topic Context</span>
                 </label>
                 <select
-                  value={selectedCampaignId}
-                  onChange={(e) => setSelectedCampaignId(e.target.value)}
+                  value={selectedTopicId}
+                  onChange={(e) => setSelectedTopicId(e.target.value)}
                   className="w-full px-3 py-2 bg-background/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer"
                 >
-                  {campaignsLoading ? (
-                    <option>Loading campaigns...</option>
-                  ) : campaigns && campaigns.length > 0 ? (
-                    campaigns.map((c) => (
+                  {topicsLoading ? (
+                    <option>Loading topics...</option>
+                  ) : topics && topics.length > 0 ? (
+                    topics.map((c) => (
                       <option key={c._id} value={c._id} className="bg-background text-white">
-                        {c.campaignName}
+                        {c.topicName}
                       </option>
                     ))
                   ) : (
-                    <option value="">No campaigns available</option>
+                    <option value="">No topics available</option>
                   )}
                 </select>
               </div>
@@ -408,7 +408,7 @@ export const Scheduler = () => {
                   </div>
                 ) : !blogRecord ? (
                   <p className="text-[10px] text-rose-400 font-mono italic">
-                    Requires a canonical blog inside this campaign.
+                    Requires a canonical blog inside this topic.
                   </p>
                 ) : platformBlogs && platformBlogs.length > 0 ? (
                   <select

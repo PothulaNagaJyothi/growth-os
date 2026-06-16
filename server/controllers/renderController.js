@@ -1,7 +1,7 @@
 const PlatformConfig = require('../models/PlatformConfig');
 const RenderedBlog = require('../models/RenderedBlog');
 const Blog = require('../models/Blog');
-const Campaign = require('../models/Campaign');
+const Topic = require('../models/Topic');
 const aiService = require('../services/aiService');
 
 // @desc    Generate a platform-specific adapted blog post dynamically reading rules from MongoDB
@@ -36,9 +36,9 @@ exports.generatePlatformRender = async (req, res, next) => {
       });
     }
 
-    // 2. Fetch parent Blog and populate Campaign & Persona details
+    // 2. Fetch parent Blog and populate Topic & Persona details
     const blog = await Blog.findById(blogId).populate({
-      path: 'campaignId',
+      path: 'topicId',
       populate: { path: 'personaId' },
     });
 
@@ -51,7 +51,7 @@ exports.generatePlatformRender = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Not authorized to render this content' });
     }
 
-    const campaign = blog.campaignId || { 
+    const campaign = blog.topicId || { 
       topic: blog.keyword || 'General Topic', 
       goal: 'General Branding', 
       keywords: blog.keyword ? [blog.keyword] : [] 
@@ -64,7 +64,7 @@ exports.generatePlatformRender = async (req, res, next) => {
 
     let lengthInstruction = "";
     const lowerPlatform = platform.toLowerCase();
-    if (lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack') {
+    if (lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack' || lowerPlatform === 'linkedin') {
       lengthInstruction = `\n\nCRITICAL REQUIREMENT FOR LONG-FORM CONTENT:
 Since this is a ${config.platformName} post, it MUST be a highly detailed, comprehensive, and structured article (aim for 600 to 800 words). Do NOT summarize or condense it into a short post, but keep it concise enough to fit the output budget without truncation. Retain the core technical explanations, code blocks, and structured lists from the canonical post.`;
     } else {
@@ -119,7 +119,7 @@ Render the tailored JSON payload now:`;
     // 4. Dispatch completions query via reusable aiService
     let renderedPayload;
     try {
-      const isLongForm = lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack';
+      const isLongForm = lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack' || lowerPlatform === 'linkedin';
       const responseText = await aiService.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -158,16 +158,41 @@ Render the tailored JSON payload now:`;
       headline = headlines[targetPlatform] || `Optimizing ${campaign.topic}`;
       
       if (targetPlatform === 'LinkedIn') {
-        bodyText = `### 📉 Most HPA setups scale too late—custom metrics fix that
+        bodyText = `# Optimizing Kubernetes HPA with Prometheus Metrics: A Guide for ${persona.personaName || 'SREs'}
 
-As a **${persona.personaName || 'Site Reliability Engineer'}**, you value efficiency and precision. Here is the exact blueprint to build high-authority clusters in 2026.
+In modern cloud-native systems, scaling infrastructure dynamically is a double-edged sword. Scale too early, and you burn server budget; scale too late, and your users suffer from high latency or connection drops. 
 
-💡 **Key Insights**:
-1. **CPU/Memory is a lagging indicator**: Scaling based purely on system resource saturation guarantees scaling latency.
-2. **Prometheus metric exporters are the solution**: Direct threshold query access enables proactive capacity adjustment.
-3. **Consolidate Workflows**: Shift monitoring from reactive alerts to autonomous capacity orchestration.
+As a **${persona.personaName || 'Tech Lead'}**, you need a system that adapts dynamically. To satisfy our goal of *"${campaign.goal || 'minimizing scaling latency and optimizing compute costs'}"*, we must move away from lagging indicators like average CPU or memory and build a metrics-driven autoscaling pipeline using Prometheus custom queries.
 
-Our target goal—*"${campaign.goal || 'optimize resource overhead'}"*—is now within reach.
+> "Standard resource scaling is reactive. Real-time application traffic demands proactive orchestration."
+
+---
+
+## The Fatal Flaw of CPU-Based Autoscaling
+
+Most SRE teams start by setting up standard Horizontal Pod Autoscaling (HPA) using CPU limits:
+\`\`\`yaml
+resources:
+  limits:
+    cpu: "1"
+    memory: 1Gi
+  requests:
+    cpu: "500m"
+    memory: 512Mi
+\`\`\`
+While this looks simple, CPU is a highly lagging indicator:
+- **Initialization Latency**: By the time CPU utilization reaches 80%, your application server queue is already saturated.
+- **Micro-bursts**: Short traffic spikes may exhaust network buffers before average CPU registration triggers a replica increase.
+- **I/O Bound Processes**: If your application is waiting on database queries or external API calls, CPU remains low while request queues climb.
+
+## Transitioning to Prometheus Custom Metrics
+
+To achieve proactive scaling, we configure the Prometheus Adapter to expose custom metrics like request rate (RPS) or queue depth to the Kubernetes custom metrics API:
+1. **Define Prometheus Rules**: Create recording rules for request rates per second aggregated by service.
+2. **Configure HPA**: Bind the HPA resource definition directly to the custom metric exporter.
+3. **Set Scaling Stabilization**: Tune the horizontal scaling cooldown window to prevent rapid thrashing.
+
+Our target goal—*"${campaign.goal || 'optimize resource overhead'}"*-is now within reach.
 
 👇 Check out the full setup guide in the comments!`;
       } else if (targetPlatform === 'Medium') {

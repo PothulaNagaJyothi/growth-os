@@ -229,6 +229,7 @@ Required JSON Structure:
   "title": "A highly compelling, SEO-optimized title for the blog post",
   "slug": "An SEO-friendly URL slug (lowercase, words separated by hyphens) containing the primary keyword",
   "metaDescription": "An engaging meta description (under 160 characters) optimized for keywords",
+  "category": "A single word category/industry classification for this post (e.g. Tech, Marketing, Operations, Finance, Legal, HR)",
   "outline": [
     {
       "sectionTitle": "Section Heading",
@@ -438,6 +439,7 @@ Required JSON Structure:
   "title": "A highly compelling, SEO-optimized title containing the target keyword",
   "slug": "An SEO-friendly URL slug (lowercase, words separated by hyphens) containing the target keyword",
   "metaDescription": "An engaging meta description (under 160 characters) optimized for the target keyword",
+  "category": "A single word category/industry classification for this post (e.g. Tech, Marketing, Operations, Finance, Legal, HR)",
   "outline": [
     {
       "sectionTitle": "Section Heading",
@@ -728,7 +730,7 @@ Requirements for the DALL-E prompt:
 2. The design style must match the target persona's preferences (e.g. professional and educational, or technical and clean).
 3. Do NOT include any text, typography, letters, logos, or words in the image. DALL-E must generate a pure background/illustration/graphic design.
 4. Output only the prompt string. Do not wrap in JSON or markdown.
-5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", if "${platform}" is LinkedIn, specify a square (1:1 aspect ratio) composition with subjects centered. If "${platform}" is Medium, Substack, Dev.to, or Company Blog, specify a wide landscape (16:9 aspect ratio) composition.`;
+5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", specify a wide landscape (16:9 aspect ratio) composition with subjects centered.`;
 
       const userContent = [
         {
@@ -787,7 +789,7 @@ Requirements for the DALL-E prompt:
 2. The design style must match the target persona's preferences (e.g. professional and educational, or technical and clean).
 3. Do NOT include any text, typography, letters, logos, or words in the image.
 4. Output only the prompt string. Do not wrap in JSON or markdown.
-5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", if "${platform}" is LinkedIn, specify a square (1:1 aspect ratio) composition with subjects centered. If "${platform}" is Medium, Substack, Dev.to, or Company Blog, specify a wide landscape (16:9 aspect ratio) composition.`;
+5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", specify a wide landscape (16:9 aspect ratio) composition with subjects centered.`;
 
     const userPrompt = `Create a DALL-E image prompt for a blog post:
 TITLE: ${blog.title}

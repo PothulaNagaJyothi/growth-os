@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post('/generate', generateResearch);
-router.get('/:campaignId', getResearchByCampaign);
+router.get('/:topicId', getResearchByCampaign);
 
 // Optional helper list and delete routes
 router.get('/', getResearches);

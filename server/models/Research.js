@@ -7,11 +7,11 @@ const ResearchSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
-    campaignId: {
+    topicId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Campaign',
+      ref: 'Topic',
       required: true,
-      unique: true, // One research report per campaign
+      unique: true, // One research report per topic
     },
     news: {
       type: String,

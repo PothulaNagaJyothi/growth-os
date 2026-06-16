@@ -7,9 +7,9 @@ const BlogSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
-    campaignId: {
+    topicId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Campaign',
+      ref: 'Topic',
       required: false,
       unique: true,
       sparse: true,

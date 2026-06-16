@@ -1,77 +1,76 @@
 import React, { useState } from 'react';
-import { ThumbsUp, MessageSquare, Repeat2, Send, Share2, Heart } from 'lucide-react';
+import { ThumbsUp, MessageSquare, Share2, Heart, Bookmark } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
 export const LinkedInPreview = ({ title, copy, hashtags = [], imageUrl }) => {
+  const [likes, setLikes] = useState(148);
   const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(148);
-  const [showAllText, setShowAllText] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
 
   const handleLike = () => {
     if (liked) {
       setLiked(false);
-      setLikesCount(prev => prev - 1);
+      setLikes(prev => prev - 1);
     } else {
       setLiked(true);
-      setLikesCount(prev => prev + 1);
+      setLikes(prev => prev + 1);
     }
   };
 
-  const paragraphs = copy ? copy.split('\n').filter(Boolean) : [];
-  const previewParagraphs = showAllText ? paragraphs : paragraphs.slice(0, 3);
-  const hasMore = paragraphs.length > 3;
-
   return (
-    <div className="glass-card rounded-2xl border border-white/5 max-w-xl mx-auto shadow-2xl overflow-hidden bg-[#0a0f1d]/90 relative text-left">
-      {/* Profile Header */}
-      <div className="p-4 flex items-center justify-between border-b border-white/5">
+    <div className="glass-card rounded-3xl border border-white/5 max-w-2xl mx-auto p-6 md:p-8 bg-[#0B0F1C]/90 text-left shadow-2xl relative">
+      {/* Sourced Author bar */}
+      <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-sm text-background shadow-glow-sm">
+          <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-bold text-white text-xs shadow-glow-sm">
             VE
           </div>
           <div>
-            <div className="flex items-center gap-1">
-              <h4 className="text-sm font-bold text-white hover:text-primary cursor-pointer transition-colors">Veloce Enterprise</h4>
-              <span className="text-[10px] text-slate-500">• 1st</span>
-            </div>
-            <p className="text-[10px] text-slate-400 font-medium leading-relaxed">SaaS Content automations & cluster scaler console</p>
-            <p className="text-[9px] text-slate-500 font-mono mt-0.5">Just now • Edited • 🌐</p>
+            <h4 className="text-xs font-bold text-white hover:underline cursor-pointer">Veloce Enterprise</h4>
+            <p className="text-[10px] text-slate-400 mt-0.5">Published as a LinkedIn Article • 6 min read • 🗓️ June 2026</p>
           </div>
         </div>
         
-        <button className="text-slate-400 hover:text-white p-1 hover:bg-white/5 rounded-lg transition-colors">
-          <Share2 size={16} />
-        </button>
+        <div className="flex items-center gap-2 text-slate-400">
+          <button 
+            onClick={() => setBookmarked(!bookmarked)}
+            className={`p-1.5 hover:bg-white/5 rounded-lg transition-colors ${bookmarked ? 'text-primary' : 'hover:text-white'}`}
+            title="Save Article"
+          >
+            <Bookmark size={15} className={bookmarked ? 'fill-primary' : ''} />
+          </button>
+          <button className="p-1.5 hover:bg-white/5 hover:text-white rounded-lg transition-colors">
+            <Share2 size={15} />
+          </button>
+        </div>
       </div>
 
-      {/* LinkedIn Post Copy */}
-      <div className="p-4 space-y-3 text-xs text-slate-200 leading-relaxed">
-        {title && <p className="font-bold text-sm text-white">{title}</p>}
+      {/* Main story content */}
+      <div className="space-y-5 leading-relaxed font-sans max-h-[380px] overflow-y-auto pr-2 scrollbar-glass">
+        {title && (
+          <h3 className="text-xl md:text-2xl font-extrabold text-white leading-tight font-serif tracking-tight">
+            {title}
+          </h3>
+        )}
         
-        <div 
-          className="space-y-3 font-sans text-[13px]"
-          dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML((showAllText ? paragraphs : paragraphs.slice(0, 3)).join('\n')) }}
-        />
-
-        {hasMore && !showAllText && (
-          <button
-            onClick={() => setShowAllText(true)}
-            className="text-[11px] font-bold text-primary hover:underline mt-1 block font-mono"
-          >
-            ...see more
-          </button>
+        {imageUrl && (
+          <div className="my-4 rounded-xl overflow-hidden border border-white/5 bg-slate-950 select-none flex items-center justify-center">
+            <img src={imageUrl} alt="LinkedIn Article Banner" className="w-full h-auto object-contain block" />
+          </div>
         )}
+        
+        <div className="text-[13px] md:text-[14px] text-slate-300 space-y-4 leading-relaxed font-serif">
+          {copy ? (
+            <div 
+              className="text-slate-300 font-serif leading-loose"
+              dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(copy) }}
+            />
+          ) : (
+            <p className="text-xs text-slate-500 font-mono">No article copy adaptations generated.</p>
+          )}
+        </div>
 
-        {showAllText && hasMore && (
-          <button
-            onClick={() => setShowAllText(false)}
-            className="text-[11px] font-bold text-primary hover:underline mt-1 block font-mono"
-          >
-            show less
-          </button>
-        )}
-
-        {/* Hashtag Pills */}
+        {/* Hashtags */}
         {hashtags && hashtags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-3">
             {hashtags.map((tag, idx) => (
@@ -86,49 +85,25 @@ export const LinkedInPreview = ({ title, copy, hashtags = [], imageUrl }) => {
         )}
       </div>
 
-      {imageUrl && (
-        <div className="border-t border-b border-white/5 bg-slate-950 select-none flex items-center justify-center">
-          <img src={imageUrl} alt="LinkedIn post media" className="w-full h-auto object-contain block" />
+      {/* Likes and Actions */}
+      <div className="pt-5 border-t border-white/5 mt-6 flex items-center justify-between text-xs text-slate-400 font-mono">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={handleLike}
+            className={`flex items-center gap-1.5 hover:text-white transition-all duration-200 ${liked ? 'text-primary' : ''}`}
+          >
+            <ThumbsUp size={14} className={liked ? 'fill-primary text-primary' : ''} />
+            <span className="font-semibold text-slate-300">{likes} Likes</span>
+          </button>
+          
+          <button className="flex items-center gap-1.5 hover:text-white transition-colors">
+            <MessageSquare size={13} />
+            <span>24 comments</span>
+          </button>
         </div>
-      )}
-
-      {/* Mock Social Telemetries Bar */}
-      <div className="px-4 py-2.5 border-t border-b border-white/5 flex items-center justify-between text-[10px] text-slate-400">
-        <div className="flex items-center gap-1.5">
-          <span className="flex items-center -space-x-1">
-            <span className="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-background text-[8px] border border-[#0a0f1d]"><ThumbsUp size={8} /></span>
-            <span className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white text-[8px] border border-[#0a0f1d]"><Heart size={8} /></span>
-          </span>
-          <span className="font-mono">{likesCount} reactions</span>
-        </div>
-        <span className="font-mono">24 comments • 12 reposts</span>
-      </div>
-
-      {/* Interactive Action Triggers */}
-      <div className="p-1.5 grid grid-cols-4 gap-1 text-[11px] text-slate-400 font-semibold uppercase">
-        <button 
-          onClick={handleLike}
-          className={`py-2 hover:bg-white/5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-            liked ? 'text-primary scale-105' : 'hover:text-white'
-          }`}
-        >
-          <ThumbsUp size={13} className={liked ? 'fill-primary text-primary' : ''} />
-          <span>{liked ? 'Liked' : 'Like'}</span>
-        </button>
         
-        <button className="py-2 hover:bg-white/5 hover:text-white rounded-xl transition-all flex items-center justify-center gap-1.5">
-          <MessageSquare size={13} />
-          <span>Comment</span>
-        </button>
-        
-        <button className="py-2 hover:bg-white/5 hover:text-white rounded-xl transition-all flex items-center justify-center gap-1.5">
-          <Repeat2 size={13} />
-          <span>Repost</span>
-        </button>
-        
-        <button className="py-2 hover:bg-white/5 hover:text-white rounded-xl transition-all flex items-center justify-center gap-1.5">
-          <Send size={13} />
-          <span>Send</span>
+        <button className="px-3.5 py-1.5 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary hover:text-white text-[10px] font-bold rounded-full font-mono uppercase tracking-wide transition-all">
+          Follow Veloce Enterprise
         </button>
       </div>
     </div>

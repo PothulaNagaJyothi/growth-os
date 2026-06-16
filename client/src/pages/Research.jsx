@@ -23,11 +23,11 @@ export const Research = () => {
   const queryClient = useQueryClient();
   const { tasks, startTask, clearTask } = useTasks();
 
-  // Tab navigation inside campaign details report
+  // Tab navigation inside details report
   const [activeTab, setActiveTab] = useState('news'); // 'news', 'keywords', 'gaps', 'angles'
   
-  // Selected campaign to run research for
-  const [selectedCampaignId, setSelectedCampaignId] = useState('');
+  // Selected topic to run research for
+  const [selectedTopicId, setSelectedTopicId] = useState('');
 
   // Status notifications
   const [showToast, setShowToast] = useState(false);
@@ -39,11 +39,11 @@ export const Research = () => {
     setTimeout(() => setShowToast(false), 4000);
   };
 
-  // 1. Fetch campaigns to populate selection dropdown
-  const { data: campaigns, isLoading: campaignsLoading } = useQuery({
-    queryKey: ['campaigns'],
+  // 1. Fetch topics to populate selection dropdown
+  const { data: topics, isLoading: topicsLoading } = useQuery({
+    queryKey: ['topics'],
     queryFn: async () => {
-      const response = await api.get('/campaigns');
+      const response = await api.get('/topics');
       return response.data.data;
     }
   });
@@ -57,7 +57,7 @@ export const Research = () => {
     }
   });
 
-  // 2. Fetch specific campaign research record
+  // 2. Fetch specific topic research record
   const {
     data: researchRecord,
     isLoading: researchLoading,
@@ -65,11 +65,11 @@ export const Research = () => {
     error,
     refetch
   } = useQuery({
-    queryKey: ['research', selectedCampaignId],
+    queryKey: ['research', selectedTopicId],
     queryFn: async () => {
-      if (!selectedCampaignId) return null;
+      if (!selectedTopicId) return null;
       try {
-        const response = await api.get(`/research/${selectedCampaignId}`);
+        const response = await api.get(`/research/${selectedTopicId}`);
         return response.data.data;
       } catch (err) {
         const is404 =
@@ -85,11 +85,11 @@ export const Research = () => {
         throw err;
       }
     },
-    enabled: !!selectedCampaignId,
+    enabled: !!selectedTopicId,
     retry: false
   });
 
-  const researchTaskId = selectedCampaignId ? `research_generate_${selectedCampaignId}` : null;
+  const researchTaskId = selectedTopicId ? `research_generate_${selectedTopicId}` : null;
 
   // Sync background research synthesis task
   useEffect(() => {
@@ -98,7 +98,7 @@ export const Research = () => {
     if (task) {
       if (task.status === 'success') {
         const newReport = task.data;
-        queryClient.setQueryData(['research', selectedCampaignId], newReport);
+        queryClient.setQueryData(['research', selectedTopicId], newReport);
         queryClient.invalidateQueries({ queryKey: ['researches'] });
         triggerToast('AI Aligned Research synthesized successfully!');
         setActiveTab('news');
@@ -110,17 +110,17 @@ export const Research = () => {
         clearTask(researchTaskId);
       }
     }
-  }, [tasks, researchTaskId, selectedCampaignId, queryClient, clearTask]);
+  }, [tasks, researchTaskId, selectedTopicId, queryClient, clearTask]);
 
   const handleGenerate = () => {
-    if (!selectedCampaignId || !researchTaskId) return;
+    if (!selectedTopicId || !researchTaskId) return;
     startTask(researchTaskId, async () => {
-      const response = await api.post('/research/generate', { campaignId: selectedCampaignId });
+      const response = await api.post('/research/generate', { topicId: selectedTopicId });
       return response.data.data;
     });
   };
 
-  const activeCampaign = campaigns?.find((c) => c._id === selectedCampaignId);
+  const activeTopic = topics?.find((t) => t._id === selectedTopicId);
 
   return (
     <div className="space-y-6 relative">
@@ -134,8 +134,8 @@ export const Research = () => {
         </div>
       )}
 
-      {!selectedCampaignId ? (
-        /* CAMPAIGN DIRECTORY VIEW */
+      {!selectedTopicId ? (
+        /* TOPICS DIRECTORY VIEW */
         <div className="space-y-6 animate-fade-in">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Research Console</h2>
@@ -144,50 +144,50 @@ export const Research = () => {
             </p>
           </div>
 
-          {campaignsLoading || researchListLoading ? (
+          {topicsLoading || researchListLoading ? (
             <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center min-h-[300px] gap-3">
               <Loader2 className="animate-spin text-primary" size={32} />
-              <p className="text-sm font-semibold tracking-wider text-slate-400">Loading Campaigns & Research Reports...</p>
+              <p className="text-sm font-semibold tracking-wider text-slate-400">Loading Topics & Research Reports...</p>
             </div>
-          ) : !campaigns || campaigns.length === 0 ? (
+          ) : !topics || topics.length === 0 ? (
             <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center text-center space-y-6 min-h-[400px]">
               <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary animate-pulse">
                 <Search size={32} />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gradient">No Campaigns Active</h3>
+                <h3 className="text-xl font-bold text-gradient">No Active Topics</h3>
                 <p className="text-sm text-slate-400 max-w-sm mx-auto">
-                  Create a marketing campaign first to unlock AI-aligned keyword intent and market intelligence synthesis.
+                  Create a blog topic first to unlock AI-aligned keyword intent and market intelligence synthesis.
                 </p>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <h3 className="text-xs uppercase tracking-[0.25em] font-semibold text-slate-400">Campaign Intelligence Directory</h3>
-                <span className="text-xs text-slate-500 font-mono">{campaigns.length} Campaigns</span>
+                <h3 className="text-xs uppercase tracking-[0.25em] font-semibold text-slate-400">Topics Intelligence Directory</h3>
+                <span className="text-xs text-slate-500 font-mono">{topics.length} Topics</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {campaigns.map((campaign) => {
+                {topics.map((t) => {
                   const hasResearch = researchList?.some(
-                    (r) => (r.campaignId?._id || r.campaignId) === campaign._id
+                    (r) => (r.topicId?._id || r.topicId) === t._id
                   );
 
                   return (
                     <div
-                      key={campaign._id}
-                      onClick={() => setSelectedCampaignId(campaign._id)}
+                      key={t._id}
+                      onClick={() => setSelectedTopicId(t._id)}
                       className="glass-card rounded-2xl border border-white/5 bg-[#0B0F1C]/90 hover:border-white/10 hover:shadow-glow-sm transition-all duration-300 flex flex-col p-6 space-y-4 justify-between relative overflow-hidden group cursor-pointer"
                     >
                       <div className="space-y-3">
                         <div className="flex justify-between items-start gap-2">
                           <div className="space-y-1">
                             <span className="text-[10px] text-primary font-bold uppercase tracking-wider font-mono">
-                              {campaign.personaId?.personaName || 'Unknown Persona'}
+                              {t.personaId?.personaName || 'Unknown Persona'}
                             </span>
                             <h3 className="text-base font-bold text-white leading-tight tracking-tight group-hover:text-primary transition-colors">
-                              {campaign.campaignName}
+                              {t.topicName}
                             </h3>
                           </div>
                           <span
@@ -202,15 +202,15 @@ export const Research = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <p className="text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Topic</p>
-                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">{campaign.topic}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Topic Details</p>
+                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">{t.topic}</p>
                         </div>
 
                         <div className="space-y-1.5">
                           <p className="text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Keywords</p>
                           <p className="text-xs text-slate-300 truncate">
-                            {campaign.keywords && campaign.keywords.length > 0
-                              ? campaign.keywords.map(k => `#${k}`).join(', ')
+                            {t.keywords && t.keywords.length > 0
+                              ? t.keywords.map(k => `#${k}`).join(', ')
                               : 'None specified'}
                           </p>
                         </div>
@@ -218,10 +218,10 @@ export const Research = () => {
 
                       <div className="pt-4 border-t border-white/5 flex items-center justify-between mt-auto" onClick={(e) => e.stopPropagation()}>
                         <span className="text-[10px] text-slate-500 font-mono capitalize">
-                          {campaign.status}
+                          {t.status}
                         </span>
                         <button
-                          onClick={() => setSelectedCampaignId(campaign._id)}
+                          onClick={() => setSelectedTopicId(t._id)}
                           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                             hasResearch
                               ? 'bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10'
@@ -240,7 +240,7 @@ export const Research = () => {
           )}
         </div>
       ) : (
-        /* CAMPAIGN RESEARCH WORKSPACE */
+        /* TOPICS RESEARCH WORKSPACE */
         <div className="space-y-6 animate-fade-in">
           {/* Page Header */}
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -251,36 +251,36 @@ export const Research = () => {
               </p>
             </div>
 
-            {/* Campaign Selection Header Toolbar */}
+            {/* Selection Header Toolbar */}
             <div className="flex items-center gap-3 self-start md:self-center">
               <button
-                onClick={() => setSelectedCampaignId('')}
+                onClick={() => setSelectedTopicId('')}
                 className="px-3 py-2 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 font-sans cursor-pointer"
               >
                 <ArrowLeft size={13} />
-                <span>Campaign Directory</span>
+                <span>Topics Directory</span>
               </button>
 
               <select
-                value={selectedCampaignId}
+                value={selectedTopicId}
                 onChange={(e) => {
-                  setSelectedCampaignId(e.target.value);
+                  setSelectedTopicId(e.target.value);
                   setActiveTab('news');
                 }}
                 disabled={(researchTaskId && tasks[researchTaskId]?.status === 'running')}
                 className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer min-w-[200px]"
               >
-                <option value="" className="bg-background text-slate-400">-- Campaign Directory --</option>
-                {campaignsLoading ? (
-                  <option>Loading campaigns...</option>
-                ) : campaigns && campaigns.length > 0 ? (
-                  campaigns.map((c) => (
-                    <option key={c._id} value={c._id} className="bg-background text-white">
-                      {c.campaignName}
+                <option value="" className="bg-background text-slate-400">-- Topics Directory --</option>
+                {topicsLoading ? (
+                  <option>Loading topics...</option>
+                ) : topics && topics.length > 0 ? (
+                  topics.map((t) => (
+                    <option key={t._id} value={t._id} className="bg-background text-white">
+                      {t.topicName}
                     </option>
                   ))
                 ) : (
-                  <option value="">No Campaigns Sourced</option>
+                  <option value="">No Topics Sourced</option>
                 )}
               </select>
             </div>
@@ -289,7 +289,7 @@ export const Research = () => {
           {/* Primary Content Panel Grid */}
           <div className="w-full">
             {(researchTaskId && tasks[researchTaskId]?.status === 'running') ? (
-              /* Live Synthesis Micro-Animation Loader */
+              /* Live Synthesis Loader */
               <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center text-center space-y-6 min-h-[480px] relative overflow-hidden bg-background/80">
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-accent/5 pointer-events-none" />
                 
@@ -305,7 +305,7 @@ export const Research = () => {
                   </p>
                 </div>
 
-                {/* Telemetry Monospace Logs */}
+                {/* Monospace Logs */}
                 <div className="w-full max-w-md p-4 rounded-xl bg-black/60 border border-white/5 text-left font-mono text-[10px] text-primary space-y-1.5 shadow-2xl">
                   <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2 mb-2">
                     <span>SYSTEM SYNTHESIS STATUS</span>
@@ -313,11 +313,11 @@ export const Research = () => {
                   </div>
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 size={10} />
-                    <span>[DB] Verified active Campaign topic: "{activeCampaign?.topic || 'N/A'}"</span>
+                    <span>[DB] Verified active Blog Topic: "{activeTopic?.topic || 'N/A'}"</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 size={10} />
-                    <span>[DB] Grounded with Persona details: "{activeCampaign?.personaId?.personaName || 'Technical Persona'}"</span>
+                    <span>[DB] Grounded with Persona details: "{activeTopic?.personaId?.personaName || 'Technical Persona'}"</span>
                   </div>
                   <div className="flex items-center gap-2 text-accent">
                     <Loader2 size={10} className="animate-spin" />
@@ -332,7 +332,7 @@ export const Research = () => {
               /* Basic Loading Indicator */
               <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center min-h-[400px] gap-3">
                 <Loader2 className="animate-spin text-primary" size={32} />
-                <p className="text-sm font-semibold tracking-wider text-slate-400">Querying campaign research records...</p>
+                <p className="text-sm font-semibold tracking-wider text-slate-400">Querying topic research records...</p>
               </div>
             ) : isError ? (
               /* Error Page */
@@ -342,7 +342,7 @@ export const Research = () => {
                 <p className="text-xs text-slate-400">{typeof error === 'string' ? error : (error.message || 'Unknown network error.')}</p>
               </div>
             ) : !researchRecord ? (
-              /* Empty Generation Dashboard Placeholder */
+              /* Empty Generation Placeholder */
               <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center text-center space-y-6 min-h-[400px]">
                 <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary animate-pulse">
                   <Search size={32} />
@@ -351,23 +351,23 @@ export const Research = () => {
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold text-gradient">No Research Available</h3>
                   <p className="text-sm text-slate-400 max-w-md mx-auto">
-                    No market intelligence has been synthesized for the campaign **"{activeCampaign?.campaignName || 'Selected Campaign'}"** yet. Trigger the AI synthesis engine to generate results.
+                    No market intelligence has been synthesized for the topic **"{activeTopic?.topicName || 'Selected Topic'}"** yet. Trigger the AI synthesis engine to generate results.
                   </p>
                 </div>
 
-                {/* Campaign Parameters preview */}
-                {activeCampaign && (
+                {/* Topic Parameters preview */}
+                {activeTopic && (
                   <div className="p-4 rounded-xl bg-white/5 border border-white/5 max-w-md text-left text-xs space-y-2">
                     <p className="font-semibold text-white">Focus Inputs Context:</p>
                     <div className="grid grid-cols-3 gap-2 text-slate-400">
-                      <span className="font-medium">Topic:</span>
-                      <span className="col-span-2 text-slate-300 truncate">{activeCampaign.topic}</span>
+                      <span className="font-medium">Topic Details:</span>
+                      <span className="col-span-2 text-slate-300 truncate">{activeTopic.topic}</span>
                       <span className="font-medium">Goal:</span>
-                      <span className="col-span-2 text-slate-300 truncate">{activeCampaign.goal || 'General growth'}</span>
+                      <span className="col-span-2 text-slate-300 truncate">{activeTopic.goal || 'General growth'}</span>
                       <span className="font-medium">Keywords:</span>
                       <span className="col-span-2 text-slate-300 truncate">
-                        {activeCampaign.keywords && activeCampaign.keywords.length > 0
-                          ? activeCampaign.keywords.join(', ')
+                        {activeTopic.keywords && activeTopic.keywords.length > 0
+                          ? activeTopic.keywords.join(', ')
                           : 'None specified'}
                       </span>
                     </div>
@@ -376,7 +376,7 @@ export const Research = () => {
 
                 <button
                   onClick={handleGenerate}
-                  disabled={!selectedCampaignId}
+                  disabled={!selectedTopicId}
                   className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-background font-bold rounded-xl shadow-glow transition-all hover:opacity-90 flex items-center gap-2"
                 >
                   <Sparkles size={16} />
@@ -393,8 +393,8 @@ export const Research = () => {
                     <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 tracking-wider uppercase font-mono">
                       Grounded Synthesis Active
                     </span>
-                    <h3 className="text-lg font-bold text-white tracking-tight">Topic: {researchRecord.campaignId?.topic || 'Market Context'}</h3>
-                    <p className="text-xs text-slate-400">Target Goal: <span className="text-slate-300">{researchRecord.campaignId?.goal || 'General branding'}</span></p>
+                    <h3 className="text-lg font-bold text-white tracking-tight">Topic: {researchRecord.topicId?.topic || 'Market Context'}</h3>
+                    <p className="text-xs text-slate-400">Target Goal: <span className="text-slate-300">{researchRecord.topicId?.goal || 'General branding'}</span></p>
                   </div>
 
                   {/* Rerun Synthesis */}
@@ -486,7 +486,7 @@ export const Research = () => {
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-sm font-bold text-white mb-2">Keyword Intent & Volumetrics</h4>
-                        <p className="text-xs text-slate-400">SEO target ideas optimized for this campaign focus topic and persona demographics.</p>
+                        <p className="text-xs text-slate-400">SEO target ideas optimized for this topic and persona demographics.</p>
                       </div>
 
                       <div className="border border-white/5 rounded-xl overflow-hidden bg-background/50">

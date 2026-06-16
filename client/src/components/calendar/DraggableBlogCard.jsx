@@ -33,7 +33,7 @@ export const DraggableBlogCard = ({ entry, onStatusChange, onSelect }) => {
     if (onSelect) {
       onSelect(entry);
     } else {
-      entry?._id && navigate(`/blog-studio/${entry._id}`);
+      entry?._id && navigate(`/blogs?view=edit&id=${entry._id}`);
     }
   };
 

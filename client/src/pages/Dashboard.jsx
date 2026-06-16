@@ -12,7 +12,8 @@ import {
   Sparkles,
   Zap,
   Globe,
-  Loader2
+  Loader2,
+  Compass
 } from 'lucide-react';
 
 const MetricCard = ({ title, value, change, isPositive, icon, colorClass }) => {
@@ -63,7 +64,7 @@ const getActivityIcon = (type) => {
       return <Sparkles size={14} className="text-accent" />;
     case 'Schedule':
       return <Calendar size={14} className="text-secondary" />;
-    case 'Campaign':
+    case 'Topic':
       return <Globe size={14} className="text-slate-400" />;
     default:
       return <Zap size={14} className="text-primary" />;
@@ -101,11 +102,11 @@ export const Dashboard = () => {
 
   const metrics = [
     {
-      title: 'Campaigns Active',
+      title: 'Topics Active',
       value: dashboardData?.metrics?.activeCampaigns ?? 0,
       change: '+0.0%',
       isPositive: true,
-      icon: <Megaphone className="text-primary" size={22} />,
+      icon: <Compass className="text-primary" size={22} />,
       colorClass: 'group-hover:shadow-glow transition-all duration-300'
     },
     {
@@ -152,10 +153,10 @@ export const Dashboard = () => {
         </div>
 
         <a 
-          href="/campaigns"
+          href="/topics"
           className="shrink-0 flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all font-bold text-background rounded-xl shadow-glow self-start md:self-center cursor-pointer"
         >
-          <span>View Campaigns</span>
+          <span>View Topics</span>
           <ArrowUpRight size={18} />
         </a>
       </div>
@@ -174,10 +175,10 @@ export const Dashboard = () => {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold">Recent Telemetry Activity</h3>
             <a 
-              href="/campaigns"
+              href="/topics"
               className="text-xs text-primary font-medium cursor-pointer hover:underline flex items-center gap-1"
             >
-              View Campaigns <ArrowUpRight size={14} />
+              View Topics <ArrowUpRight size={14} />
             </a>
           </div>
 

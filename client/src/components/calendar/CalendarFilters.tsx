@@ -86,7 +86,7 @@ export const CalendarFilters = ({ filters, options, onChange, onClear }) => {
           </div>
 
           <div>
-            <label htmlFor="category-select" className="block mb-2 text-xs uppercase tracking-[0.18em] text-slate-400">Keyword Category</label>
+            <label htmlFor="category-select" className="block mb-2 text-xs uppercase tracking-[0.18em] text-slate-400">Category</label>
             <div className="relative">
               <select
                 id="category-select"

@@ -7,27 +7,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#080b11",
-        surface: "#101622",
-        "surface-light": "#1b2536",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        surface: "hsl(var(--card))",
+        "surface-light": "hsl(var(--muted))",
         primary: {
-          DEFAULT: "#00f2fe",
-          hover: "#00c8fe",
+          DEFAULT: "hsl(var(--primary))",
+          hover: "hsl(18 80% 45%)",
         },
         secondary: {
-          DEFAULT: "#8a2be2",
-          hover: "#7b1fa2",
+          DEFAULT: "hsl(var(--secondary))",
+          hover: "hsl(43 74% 60%)",
         },
-        accent: "#4facfe",
-        muted: "#64748b",
-        border: "#1e293b",
+        accent: "hsl(var(--accent))",
+        muted: "hsl(var(--muted-foreground))",
+        border: "hsl(var(--border))",
       },
       fontFamily: {
         sans: ["Outfit", "Inter", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 20px rgba(0, 242, 254, 0.15)",
-        "glow-purple": "0 0 20px rgba(138, 43, 226, 0.15)",
+        glow: "0 0 20px rgba(242, 91, 24, 0.15)",
+        "glow-purple": "0 0 20px rgba(224, 187, 112, 0.15)",
       },
     },
   },

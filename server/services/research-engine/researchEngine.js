@@ -1,5 +1,5 @@
 const Company = require('../../models/Company');
-const Campaign = require('../../models/Campaign');
+const Topic = require('../../models/Topic');
 const Persona = require('../../models/Persona');
 const KnowledgeBase = require('../../models/KnowledgeBase');
 const aiService = require('../aiService');
@@ -8,19 +8,19 @@ class ResearchEngine {
   /**
    * Generates a market research synthesis report by delegating to the reusable AIService
    * @param {string} companyId - User's company ID context
-   * @param {string} campaignId - Targeted campaign ID
+   * @param {string} topicId - Targeted topic ID
    */
-  async synthesizeResearch(companyId, campaignId) {
+  async synthesizeResearch(companyId, topicId) {
     try {
-      // 1. Fetch Campaign and populate references
-      const campaign = await Campaign.findById(campaignId).populate('personaId');
-      if (!campaign) {
-        throw new Error('Campaign not found');
+      // 1. Fetch Topic and populate references
+      const topic = await Topic.findById(topicId).populate('personaId');
+      if (!topic) {
+        throw new Error('Topic not found');
       }
 
       // Verify company ownership context
-      if (campaign.companyId.toString() !== companyId.toString()) {
-        throw new Error('Unauthorized company context for campaign');
+      if (topic.companyId.toString() !== companyId.toString()) {
+        throw new Error('Unauthorized company context for topic');
       }
 
       // 2. Fetch Company details
@@ -48,7 +48,7 @@ class ResearchEngine {
           .join('\n\n');
       }
 
-      const persona = campaign.personaId || {
+      const persona = topic.personaId || {
         personaName: 'General Audience',
         tone: 'Informative',
         writingStyle: 'Direct',
@@ -57,14 +57,14 @@ class ResearchEngine {
 
       // 4. Delegate to AIService
       const synthesizedData = await aiService.generateResearch(
-        campaign,
+        topic,
         companyData,
         persona,
         knowledgeContext
       );
 
       return {
-        topic: campaign.topic,
+        topic: topic.topic,
         news: synthesizedData.news,
         keywords: synthesizedData.keywords,
         competitorAnalysis: synthesizedData.competitorAnalysis,

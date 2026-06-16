@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const CampaignSchema = new mongoose.Schema(
+const TopicSchema = new mongoose.Schema(
   {
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -12,14 +12,14 @@ const CampaignSchema = new mongoose.Schema(
       ref: 'Persona',
       required: [true, 'Persona selection is required'],
     },
-    campaignName: {
+    topicName: {
       type: String,
-      required: [true, 'Campaign Name is required'],
+      required: [true, 'Topic Name is required'],
       trim: true,
     },
     topic: {
       type: String,
-      required: [true, 'Campaign Topic is required'],
+      required: [true, 'Topic Detail is required'],
       trim: true,
     },
     keywords: {
@@ -46,4 +46,4 @@ const CampaignSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Campaign', CampaignSchema);
+module.exports = mongoose.model('Topic', TopicSchema);

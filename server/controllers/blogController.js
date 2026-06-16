@@ -1,5 +1,5 @@
 const Blog = require('../models/Blog');
-const Campaign = require('../models/Campaign');
+const Topic = require('../models/Topic');
 const Company = require('../models/Company');
 const Research = require('../models/Research');
 const KnowledgeBase = require('../models/KnowledgeBase');
@@ -14,11 +14,11 @@ const contentValidator = require('../services/content-engine/contentValidator');
 // @access  Private
 exports.generateBlog = async (req, res, next) => {
   try {
-    const { campaignId, blogId, keyword, targetAudience, tone } = req.body;
-    if (!campaignId && (!keyword || !targetAudience || !tone)) {
+    const { topicId, blogId, keyword, targetAudience, tone } = req.body;
+    if (!topicId && (!keyword || !targetAudience || !tone)) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Either Campaign ID or a combination of Keyword, Target Audience, and Tone is required.' 
+        error: 'Either Topic ID or a combination of Keyword, Target Audience, and Tone is required.' 
       });
     }
 
@@ -40,44 +40,44 @@ exports.generateBlog = async (req, res, next) => {
     let resolvedKeyword = keyword || '';
     let resolvedAudience = targetAudience || '';
     let resolvedTone = tone || '';
-    let campaign = null;
+    let topic = null;
     let seoBrief = null;
 
-    if (campaignId) {
-      // 1. Verify Campaign and populate Persona
-      campaign = await Campaign.findById(campaignId).populate('personaId');
-      if (!campaign) {
-        return res.status(404).json({ success: false, error: 'Campaign not found' });
+    if (topicId) {
+      // 1. Verify Topic and populate Persona
+      topic = await Topic.findById(topicId).populate('personaId');
+      if (!topic) {
+        return res.status(404).json({ success: false, error: 'Topic not found' });
       }
 
-      if (campaign.companyId.toString() !== req.user.companyId.toString()) {
-        return res.status(403).json({ success: false, error: 'Not authorized to build content for this campaign' });
+      if (topic.companyId.toString() !== req.user.companyId.toString()) {
+        return res.status(403).json({ success: false, error: 'Not authorized to build content for this topic' });
       }
 
-      const persona = campaign.personaId || {
+      const persona = topic.personaId || {
         personaName: 'General Professionals',
         tone: 'Informative',
         writingStyle: 'Direct',
         audienceType: 'Content Strategists',
       };
 
-      resolvedKeyword = campaign.keywords && campaign.keywords.length > 0 ? campaign.keywords[0] : campaign.topic;
+      resolvedKeyword = topic.keywords && topic.keywords.length > 0 ? topic.keywords[0] : topic.topic;
       resolvedAudience = persona.audienceType || '';
       resolvedTone = persona.tone || '';
 
       // Query Research Data (If missing, build dynamic contextual fallback)
-      let research = await Research.findOne({ campaignId });
+      let research = await Research.findOne({ topicId });
       if (!research) {
         console.log('[BLOG CONTROLLER] No active research report found in database. Building dynamic fallback context...');
         research = {
-          news: `Recent announcements indicate significant transitions in automated ${campaign.topic} services.`,
+          news: `Recent announcements indicate significant transitions in automated ${topic.topic} services.`,
           keywords: [
-            { keyword: `best ${campaign.topic} systems`, volume: 'High', difficulty: 'Hard', intent: 'Commercial' },
-            { keyword: `how to implement ${campaign.topic}`, volume: 'Medium', difficulty: 'Easy', intent: 'Informational' }
+            { keyword: `best ${topic.topic} systems`, volume: 'High', difficulty: 'Hard', intent: 'Commercial' },
+            { keyword: `how to implement ${topic.topic}`, volume: 'Medium', difficulty: 'Easy', intent: 'Informational' }
           ],
           competitorAnalysis: `Legacy players have a massive content void on advanced integration templates.`,
           suggestedAngles: [
-            `Title: The Scaling Guide to ${campaign.topic}`
+            `Title: The Scaling Guide to ${topic.topic}`
           ]
         };
       }
@@ -85,9 +85,9 @@ exports.generateBlog = async (req, res, next) => {
       console.log(`[BLOG SERVICE] Triggering SEO Brief generation for campaign keyword: "${resolvedKeyword}"...`);
       seoBrief = await briefGenerator.generateBrief(resolvedKeyword);
 
-      console.log(`[BLOG SERVICE] Triggering AI Canonical Blog generation for campaign: "${campaign.campaignName}" guided by SEO Brief...`);
+      console.log(`[BLOG SERVICE] Triggering AI Canonical Blog generation for topic: "${topic.topicName}" guided by SEO Brief...`);
       blogPayload = await aiService.generateCanonicalBlog(
-        campaign,
+        topic,
         persona,
         research,
         knowledgeContext,
@@ -172,9 +172,9 @@ exports.generateBlog = async (req, res, next) => {
     let blog = null;
     if (blogId) {
       blog = await Blog.findById(blogId);
-    } else if (campaignId) {
+    } else if (topicId) {
       // One-to-one mapping: overwrite existing campaign blog if it exists
-      blog = await Blog.findOne({ campaignId });
+      blog = await Blog.findOne({ topicId });
     }
 
     if (blog) {
@@ -194,6 +194,9 @@ exports.generateBlog = async (req, res, next) => {
       blog.seoScore = finalSeoScore;
       blog.seoAnalysis = finalSeoAnalysis;
       blog.wordCount = contentValidator.countWords(finalContent);
+      if (blogPayload.category) {
+        blog.keywordCategory = blogPayload.category;
+      }
       if (optResult && optResult.history && optResult.history.length > 0) {
         blog.optimizationHistory = (blog.optimizationHistory || []).concat(optResult.history);
       }
@@ -237,7 +240,7 @@ exports.generateBlog = async (req, res, next) => {
 
       blog = await Blog.create({
         companyId: req.user.companyId,
-        campaignId: campaignId || undefined,
+        topicId: topicId || undefined,
         title: finalTitle,
         metaDescription: finalMeta,
         outline: blogPayload.outline,
@@ -252,7 +255,8 @@ exports.generateBlog = async (req, res, next) => {
         seoBrief: seoBrief || undefined,
         wordCount: contentValidator.countWords(finalContent),
         optimizationHistory: (optResult && optResult.history) ? optResult.history : [],
-        versions: versions
+        versions: versions,
+        keywordCategory: blogPayload.category || 'General'
       });
     }
 
@@ -302,7 +306,7 @@ exports.getBlogById = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
     }
 
-    const blog = await Blog.findById(req.params.id).populate('campaignId');
+    const blog = await Blog.findById(req.params.id).populate('topicId');
 
     if (!blog) {
       return res.status(404).json({ success: false, error: 'Blog post not found' });
@@ -442,7 +446,7 @@ exports.updateBlog = async (req, res, next) => {
     await blog.save();
 
     // Populate campaignId for compatibility
-    const updatedBlog = await Blog.findById(blog._id).populate('campaignId');
+    const updatedBlog = await Blog.findById(blog._id).populate('topicId');
 
     res.status(200).json({
       success: true,
@@ -454,34 +458,34 @@ exports.updateBlog = async (req, res, next) => {
   }
 };
 
-// @desc    Get blog details by Campaign ID
-// @route   GET /api/blogs/campaign/:campaignId
+// @desc    Get blog details by Topic ID
+// @route   GET /api/blogs/topic/:topicId
 // @access  Private
-exports.getBlogByCampaign = async (req, res, next) => {
+exports.getBlogByTopic = async (req, res, next) => {
   try {
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
     }
 
-    // Verify campaign belongs to company
-    const campaign = await Campaign.findById(req.params.campaignId);
-    if (!campaign) {
-      return res.status(404).json({ success: false, error: 'Campaign not found' });
+    // Verify topic belongs to company
+    const topic = await Topic.findById(req.params.topicId);
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
     }
 
-    if (campaign.companyId.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ success: false, error: 'Not authorized to access content for this campaign' });
+    if (topic.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to access content for this topic' });
     }
 
     const blog = await Blog.findOne({
       companyId: req.user.companyId,
-      campaignId: req.params.campaignId,
-    }).populate('campaignId');
+      topicId: req.params.topicId,
+    }).populate('topicId');
 
     if (!blog) {
       return res.status(404).json({
         success: false,
-        error: 'No canonical blog has been generated for this campaign yet.',
+        error: 'No canonical blog has been generated for this topic yet.',
       });
     }
 
@@ -675,7 +679,7 @@ exports.restoreBlogVersion = async (req, res, next) => {
 
     await blog.save();
 
-    const updatedBlog = await Blog.findById(blog._id).populate('campaignId');
+    const updatedBlog = await Blog.findById(blog._id).populate('topicId');
 
     res.status(200).json({
       success: true,

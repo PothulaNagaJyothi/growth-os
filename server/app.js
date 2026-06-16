@@ -17,7 +17,7 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const companyRoutes = require('./routes/company');
 const personaRoutes = require('./routes/persona');
-const campaignRoutes = require('./routes/campaign');
+const topicRoutes = require('./routes/topic');
 const knowledgeRoutes = require('./routes/knowledge');
 const researchRoutes = require('./routes/research');
 const blogRoutes = require('./routes/blog');
@@ -65,7 +65,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/company', companyRoutes);
 app.use('/api/personas', personaRoutes);
-app.use('/api/campaigns', campaignRoutes);
+app.use('/api/topics', topicRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/blogs', blogRoutes);

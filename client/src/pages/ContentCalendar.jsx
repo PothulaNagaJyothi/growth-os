@@ -223,7 +223,7 @@ export const ContentCalendar = () => {
                     <WeekCalendarView
                       currentDate={currentDate}
                       blogs={scheduledEntries}
-                      onSelectBlog={(blog) => blog?._id && navigate(`/blog-studio/${blog._id}`)}
+                      onSelectBlog={(blog) => blog?._id && navigate(`/blogs?view=edit&id=${blog._id}`)}
                       onStatusChange={(blog, status) => statusMutation.mutate({ id: blog._id, status })}
                     />
                   </div>
@@ -232,7 +232,7 @@ export const ContentCalendar = () => {
                     <MonthCalendarView
                       currentDate={currentDate}
                       blogs={scheduledEntries}
-                      onSelectBlog={(blog) => blog?._id && navigate(`/blog-studio/${blog._id}`)}
+                      onSelectBlog={(blog) => blog?._id && navigate(`/blogs?view=edit&id=${blog._id}`)}
                     />
                   </div>
                 )}

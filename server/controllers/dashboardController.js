@@ -1,4 +1,4 @@
-const Campaign = require('../models/Campaign');
+const Topic = require('../models/Topic');
 const Blog = require('../models/Blog');
 const RenderedBlog = require('../models/RenderedBlog');
 const Schedule = require('../models/Schedule');
@@ -16,12 +16,12 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // 1. Fetch counts
     const [
-      activeCampaigns,
+      activeTopics,
       blogsGenerated,
       scheduledPosts,
       publishedPosts
     ] = await Promise.all([
-      Campaign.countDocuments({ companyId, status: { $ne: 'completed' } }),
+      Topic.countDocuments({ companyId, status: { $ne: 'completed' } }),
       Blog.countDocuments({ companyId }),
       Schedule.countDocuments({ companyId, status: 'scheduled' }),
       Schedule.countDocuments({ companyId, status: 'published' })
@@ -29,12 +29,12 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // 2. Fetch recent records for activity log
     const [
-      recentCampaigns,
+      recentTopics,
       recentBlogs,
       recentRenders,
       recentSchedules
     ] = await Promise.all([
-      Campaign.find({ companyId }).sort({ createdAt: -1 }).limit(5),
+      Topic.find({ companyId }).sort({ createdAt: -1 }).limit(5),
       Blog.find({ companyId }).sort({ createdAt: -1 }).limit(5),
       RenderedBlog.find({ companyId }).sort({ createdAt: -1 }).limit(5),
       Schedule.find({ companyId }).sort({ createdAt: -1 }).limit(5).populate('platformBlogId')
@@ -43,12 +43,12 @@ exports.getDashboardStats = async (req, res, next) => {
     // 3. Normalize activities into a unified chronological array
     const activities = [];
 
-    recentCampaigns.forEach(c => {
+    recentTopics.forEach(t => {
       activities.push({
-        action: 'Created Campaign',
-        target: c.campaignName,
-        timestamp: c.createdAt,
-        type: 'Campaign'
+        action: 'Created Topic',
+        target: t.topicName,
+        timestamp: t.createdAt,
+        type: 'Topic'
       });
     });
 
@@ -90,7 +90,7 @@ exports.getDashboardStats = async (req, res, next) => {
       success: true,
       data: {
         metrics: {
-          activeCampaigns,
+          activeCampaigns: activeTopics, // Keep key name for frontend compatibility or map it
           blogsGenerated,
           scheduledPosts,
           publishedPosts

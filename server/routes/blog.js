@@ -4,7 +4,7 @@ const {
   getBlogs,
   getBlogById,
   updateBlog,
-  getBlogByCampaign,
+  getBlogByTopic,
   optimizeBlog,
   getBlogVersions,
   restoreBlogVersion,
@@ -19,7 +19,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post('/generate', generateBlog);
-router.get('/campaign/:campaignId', getBlogByCampaign);
+router.get('/topic/:topicId', getBlogByTopic);
 router.post('/:id/optimize', optimizeBlog);
 router.get('/:id/versions', getBlogVersions);
 router.post('/:id/restore/:version', restoreBlogVersion);

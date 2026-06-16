@@ -1,11 +1,11 @@
 const express = require('express');
 const {
-  getCampaigns,
-  getCampaignById,
-  createCampaign,
-  updateCampaign,
-  deleteCampaign,
-} = require('../controllers/campaignController');
+  getTopics,
+  getTopicById,
+  createTopic,
+  updateTopic,
+  deleteTopic,
+} = require('../controllers/topicController');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -14,12 +14,12 @@ const router = express.Router();
 router.use(protect);
 
 router.route('/')
-  .get(getCampaigns)
-  .post(createCampaign);
+  .get(getTopics)
+  .post(createTopic);
 
 router.route('/:id')
-  .get(getCampaignById)
-  .put(updateCampaign)
-  .delete(deleteCampaign);
+  .get(getTopicById)
+  .put(updateTopic)
+  .delete(deleteTopic);
 
 module.exports = router;

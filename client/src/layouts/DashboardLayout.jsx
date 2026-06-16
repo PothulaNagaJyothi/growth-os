@@ -4,12 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
   LayoutDashboard,
-  Megaphone,
   Search,
   BookOpen,
-  Image as ImageIcon,
-  Eye,
-  Calendar,
   CalendarRange,
   Settings,
   LogOut,
@@ -18,7 +14,7 @@ import {
   X,
   Bell,
   Sparkles,
-  FileText
+  Compass
 } from 'lucide-react';
 
 const SidebarItem = ({ icon, label, active, onClick }) => {
@@ -67,18 +63,12 @@ export const DashboardLayout = ({ children }) => {
 
   const pathLabelMap = {
     dashboard: 'Dashboard',
-    campaigns: 'Campaigns',
-    personas: 'Personas',
-    knowledge: 'Knowledge Base',
-    research: 'Research',
+    brand: 'Brand Setup',
+    topics: 'Topics & Research',
+    blogs: 'Blogs Studio',
+    calendar: 'Content Planner',
     'blog-studio': 'Blog Studio',
-    blogs: 'Blogs Directory',
-    'quick-blog': 'Quick Blog',
-    'image-studio': 'Image Studio',
     preview: 'Preview Center',
-    scheduler: 'Scheduler',
-    'content-calendar': 'Content Calendar',
-    settings: 'Settings',
   };
 
   const getSegmentLabel = (segment) => {
@@ -95,18 +85,10 @@ export const DashboardLayout = ({ children }) => {
 
   const menuItems = [
     { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
-    { label: 'Campaigns', icon: <Megaphone size={20} />, path: '/campaigns' },
-    { label: 'Personas', icon: <User size={20} />, path: '/personas' },
-    { label: 'Knowledge Base', icon: <FileText size={20} />, path: '/knowledge' },
-    { label: 'Research', icon: <Search size={20} />, path: '/research' },
-    { label: 'Blog Studio', icon: <BookOpen size={20} />, path: '/blog-studio' },
-    { label: 'Blogs Directory', icon: <FileText size={20} />, path: '/blogs' },
-    { label: 'Quick Blog', icon: <Sparkles size={20} />, path: '/quick-blog' },
-    { label: 'Image Studio', icon: <ImageIcon size={20} />, path: '/image-studio' },
-    { label: 'Preview Center', icon: <Eye size={20} />, path: '/preview' },
-    { label: 'Scheduler', icon: <Calendar size={20} />, path: '/scheduler' },
-    { label: 'Content Calendar', icon: <CalendarRange size={20} />, path: '/content-calendar' },
-    { label: 'Settings', icon: <Settings size={20} />, path: '/settings' },
+    { label: 'Brand Setup', icon: <Settings size={20} />, path: '/brand' },
+    { label: 'Topics & Research', icon: <Compass size={20} />, path: '/topics' },
+    { label: 'Blogs Studio', icon: <BookOpen size={20} />, path: '/blogs' },
+    { label: 'Content Planner', icon: <CalendarRange size={20} />, path: '/calendar' },
   ];
 
   const handleLogout = async () => {
@@ -115,7 +97,7 @@ export const DashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex bg-background text-white overflow-hidden">
+    <div className="min-h-screen flex bg-background text-foreground overflow-hidden">
       {/* Sidebar for Desktop */}
       <aside className="hidden lg:flex flex-col w-64 glass-card border-r border-white/5 h-screen sticky top-0">
         {/* Brand Logo */}
@@ -124,10 +106,10 @@ export const DashboardLayout = ({ children }) => {
             <Sparkles size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
+            <h1 className="font-bold text-lg tracking-tight text-foreground">
               Growth OS
             </h1>
-            <p className="text-[10px] text-primary tracking-widest uppercase font-semibold">Content Engine</p>
+            <p className="text-[10px] text-primary tracking-widest uppercase font-semibold">Blog Engine</p>
           </div>
         </div>
 
@@ -266,12 +248,6 @@ export const DashboardLayout = ({ children }) => {
 
           {/* Right Header Controls */}
           <div className="flex items-center gap-4 ml-auto">
-            <button className="relative p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-ping" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-            </button>
-            <div className="h-6 w-px bg-white/10" />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center font-bold text-sm shadow-glow text-background">
                 {user?.name ? user.name[0].toUpperCase() : 'U'}

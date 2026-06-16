@@ -1,41 +1,41 @@
 const Research = require('../models/Research');
-const Campaign = require('../models/Campaign');
+const Topic = require('../models/Topic');
 const researchEngine = require('../services/research-engine/researchEngine');
 
-// @desc    Trigger AI research synthesis for a campaign and store it
+// @desc    Trigger AI research synthesis for a topic and store it
 // @route   POST /api/research/generate
 // @access  Private
 exports.generateResearch = async (req, res, next) => {
   try {
-    const { campaignId } = req.body;
-    if (!campaignId) {
-      return res.status(400).json({ success: false, error: 'Campaign ID is required' });
+    const { topicId } = req.body;
+    if (!topicId) {
+      return res.status(400).json({ success: false, error: 'Topic ID is required' });
     }
 
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
     }
 
-    // 1. Verify campaign exists and belongs to user's company
-    const campaign = await Campaign.findById(campaignId);
-    if (!campaign) {
-      return res.status(404).json({ success: false, error: 'Campaign not found' });
+    // 1. Verify topic exists and belongs to user's company
+    const topic = await Topic.findById(topicId);
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
     }
 
-    if (campaign.companyId.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ success: false, error: 'Not authorized to research this campaign' });
+    if (topic.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to research this topic' });
     }
 
     // 2. Synthesize using ResearchEngine service
-    const synthesizedData = await researchEngine.synthesizeResearch(req.user.companyId, campaignId);
+    const synthesizedData = await researchEngine.synthesizeResearch(req.user.companyId, topicId);
 
-    // 3. Save to database - Overwrite existing research if it already exists for this campaign, or create a new one!
-    // Since unique is campaignId, let's do an upsert to keep the DB clean and avoid duplicate key errors.
+    // 3. Save to database - Overwrite existing research if it already exists for this topic, or create a new one!
+    // Since unique is topicId, let's do an upsert to keep the DB clean and avoid duplicate key errors.
     const research = await Research.findOneAndUpdate(
-      { campaignId },
+      { topicId },
       {
         companyId: req.user.companyId,
-        campaignId,
+        topicId,
         news: synthesizedData.news,
         keywords: synthesizedData.keywords,
         competitorAnalysis: synthesizedData.competitorAnalysis,
@@ -57,8 +57,8 @@ exports.generateResearch = async (req, res, next) => {
   }
 };
 
-// @desc    Get research report for a specific campaign
-// @route   GET /api/research/:campaignId
+// @desc    Get research report for a specific topic
+// @route   GET /api/research/:topicId
 // @access  Private
 exports.getResearchByCampaign = async (req, res, next) => {
   try {
@@ -66,25 +66,25 @@ exports.getResearchByCampaign = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
     }
 
-    // Verify campaign belongs to company
-    const campaign = await Campaign.findById(req.params.campaignId);
-    if (!campaign) {
-      return res.status(404).json({ success: false, error: 'Campaign not found' });
+    // Verify topic belongs to company
+    const topic = await Topic.findById(req.params.topicId);
+    if (!topic) {
+      return res.status(404).json({ success: false, error: 'Topic not found' });
     }
 
-    if (campaign.companyId.toString() !== req.user.companyId.toString()) {
-      return res.status(403).json({ success: false, error: 'Not authorized to access research for this campaign' });
+    if (topic.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to access research for this topic' });
     }
 
     const researchRecord = await Research.findOne({
       companyId: req.user.companyId,
-      campaignId: req.params.campaignId,
-    }).populate('campaignId');
+      topicId: req.params.topicId,
+    }).populate('topicId');
 
     if (!researchRecord) {
       return res.status(404).json({
         success: false,
-        error: 'No research report found for this campaign context. Synthesize one first.',
+        error: 'No research report found for this topic context. Synthesize one first.',
       });
     }
 
@@ -106,7 +106,7 @@ exports.getResearches = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
     }
 
-    const researchRecords = await Research.find({ companyId: req.user.companyId }).populate('campaignId');
+    const researchRecords = await Research.find({ companyId: req.user.companyId }).populate('topicId');
     res.status(200).json({
       success: true,
       count: researchRecords.length,

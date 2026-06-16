@@ -35,24 +35,24 @@ exports.generateImage = async (req, res, next) => {
     if (!resolvedPrompt) {
       console.log('[IMAGE CONTROLLER] Prompt missing. Generating prompt dynamically using branding details...');
       const Company = require('../models/Company');
-      const Campaign = require('../models/Campaign');
+      const Topic = require('../models/Topic');
       const Persona = require('../models/Persona');
 
       const company = await Company.findById(req.user.companyId);
-      let campaign = null;
+      let topic = null;
       let persona = null;
 
-      if (blog.campaignId) {
-        campaign = await Campaign.findById(blog.campaignId);
-        if (campaign && campaign.personaId) {
-          persona = await Persona.findById(campaign.personaId);
+      if (blog.topicId) {
+        topic = await Topic.findById(blog.topicId);
+        if (topic && topic.personaId) {
+          persona = await Persona.findById(topic.personaId);
         }
       }
 
       resolvedPrompt = await aiService.generateBrandedImagePrompt({
         blog,
         company,
-        campaign,
+        topic,
         persona,
         platform: req.body.platform || 'General'
       });
@@ -192,7 +192,7 @@ exports.suggestPrompt = async (req, res, next) => {
     }
 
     const Company = require('../models/Company');
-    const Campaign = require('../models/Campaign');
+    const Topic = require('../models/Topic');
     const Persona = require('../models/Persona');
 
     const blog = await Blog.findById(blogId);
@@ -201,20 +201,20 @@ exports.suggestPrompt = async (req, res, next) => {
     }
 
     const company = await Company.findById(req.user.companyId);
-    let campaign = null;
+    let topic = null;
     let persona = null;
 
-    if (blog.campaignId) {
-      campaign = await Campaign.findById(blog.campaignId);
-      if (campaign && campaign.personaId) {
-        persona = await Persona.findById(campaign.personaId);
+    if (blog.topicId) {
+      topic = await Topic.findById(blog.topicId);
+      if (topic && topic.personaId) {
+        persona = await Persona.findById(topic.personaId);
       }
     }
 
     const suggestedPrompt = await aiService.generateBrandedImagePrompt({
       blog,
       company,
-      campaign,
+      topic,
       persona,
       platform
     });
