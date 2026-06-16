@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import { useTasks } from '../../context/TaskContext';
 import {
@@ -14,7 +14,9 @@ import {
   Download,
   Image as ImageIcon,
   ArrowLeft,
-  Repeat2
+  Repeat2,
+  Save,
+  X
 } from 'lucide-react';
 import { LinkedInPreview } from '../previews/LinkedInPreview';
 import { MediumPreview } from '../previews/MediumPreview';
@@ -87,6 +89,38 @@ export const BlogPreview = ({ blogId, onBack }) => {
     retry: false
   });
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCopy, setEditCopy] = useState('');
+  const [editHashtags, setEditHashtags] = useState([]);
+
+  // Sync edit states when renderedRecord changes
+  useEffect(() => {
+    if (renderedRecord) {
+      setEditTitle(renderedRecord.title || '');
+      setEditCopy(renderedRecord.copy || '');
+      setEditHashtags(renderedRecord.hashtags || []);
+    } else {
+      setEditTitle('');
+      setEditCopy('');
+      setEditHashtags([]);
+    }
+  }, [renderedRecord]);
+
+  // Sync mutation to save platform rendered post
+  const updateRenderMutation = useMutation({
+    mutationFn: async (payload) => {
+      const response = await api.put(`/render/${renderedRecord._id}`, payload);
+      return response.data.data;
+    },
+    onSuccess: (updatedRender) => {
+      queryClient.setQueryData(['rendered', blogId, resolvedPlatformName], updatedRender);
+      queryClient.invalidateQueries({ queryKey: ['rendered', blogId, resolvedPlatformName] });
+      setIsEditing(false);
+      triggerToast(`${resolvedPlatformName} copy updated & SEO score recalculated!`);
+    }
+  });
+
   // 3. Fetch images for cover art
   const { data: blogImages = [] } = useQuery({
     queryKey: ['images', blogId],
@@ -100,6 +134,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
 
   const coverImageTaskId = blogId && activeTab ? `preview_image_generate_${blogId}_${activeTab}` : null;
   const adaptTaskId = blogId && activeTab ? `preview_adapt_${blogId}_${activeTab}` : null;
+  const optimizeRenderTaskId = blogId && activeTab ? `preview_optimize_${blogId}_${activeTab}` : null;
 
   // Sync background cover image generation task
   useEffect(() => {
@@ -138,6 +173,25 @@ export const BlogPreview = ({ blogId, onBack }) => {
     }
   }, [tasks, adaptTaskId, blogId, resolvedPlatformName, queryClient, clearTask]);
 
+  // Sync background platform optimization task
+  useEffect(() => {
+    if (!optimizeRenderTaskId) return;
+    const task = tasks[optimizeRenderTaskId];
+    if (task) {
+      if (task.status === 'success') {
+        const optimizedRender = task.data;
+        queryClient.setQueryData(['rendered', blogId, resolvedPlatformName], optimizedRender);
+        triggerToast(`${resolvedPlatformName} copy auto-optimized successfully!`);
+        clearTask(optimizeRenderTaskId);
+      } else if (task.status === 'error') {
+        const err = task.error;
+        console.error(err);
+        triggerToast(err.response?.data?.error || 'Optimization failed.', 'error');
+        clearTask(optimizeRenderTaskId);
+      }
+    }
+  }, [tasks, optimizeRenderTaskId, blogId, resolvedPlatformName, queryClient, clearTask]);
+
   const getPlatformDisplaySize = () => {
     if (activeTab === 'linkedin') return '1200x644';
     if (activeTab === 'medium') return '1400x788';
@@ -147,6 +201,10 @@ export const BlogPreview = ({ blogId, onBack }) => {
   };
 
   const getPlatformDimensions = () => {
+    if (activeTab === 'linkedin') return '1200x644';
+    if (activeTab === 'medium') return '1400x788';
+    if (activeTab === 'devto') return '1000x420';
+    if (activeTab === 'substack') return '1456x1048';
     return '1792x1024';
   };
 
@@ -205,6 +263,14 @@ export const BlogPreview = ({ blogId, onBack }) => {
     if (!blogId || !resolvedPlatformName || !adaptTaskId) return;
     startTask(adaptTaskId, async () => {
       const response = await api.post(`/render/${resolvedPlatformName.replace(' ', '-')}`, { blogId });
+      return response.data.data;
+    });
+  };
+
+  const handleOptimizeRender = () => {
+    if (!renderedRecord || !optimizeRenderTaskId) return;
+    startTask(optimizeRenderTaskId, async () => {
+      const response = await api.post(`/render/${renderedRecord._id}/optimize`);
       return response.data.data;
     });
   };
@@ -460,6 +526,36 @@ export const BlogPreview = ({ blogId, onBack }) => {
       border-radius: 4px;
       font-family: monospace;
     }
+    a {
+      color: #f25b18;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #d1460f;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
   </style>
 </head>
 <body>
@@ -512,11 +608,11 @@ export const BlogPreview = ({ blogId, onBack }) => {
     <div className="space-y-6">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Check size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 
@@ -552,7 +648,10 @@ export const BlogPreview = ({ blogId, onBack }) => {
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setIsEditing(false);
+                }}
                 className={`flex-1 py-3 text-center text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === tab
                     ? 'bg-gradient-to-r from-primary/10 to-primary/20 text-primary border border-primary/20 shadow-glow-sm'
@@ -657,6 +756,36 @@ export const BlogPreview = ({ blogId, onBack }) => {
                   </button>
                 </div>
               </div>
+
+              {/* Canonical SEO scorecard */}
+              <div className="grid grid-cols-4 gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl text-center text-xs">
+                <div>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase block">SEO Score</span>
+                  <span className={`text-base font-extrabold font-mono ${
+                    blogRecord.seoScore >= 80 ? 'text-emerald-400' : blogRecord.seoScore >= 50 ? 'text-amber-400' : 'text-rose-400'
+                  }`}>
+                    {blogRecord.seoScore || 0}/100
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Words</span>
+                  <span className="text-base font-extrabold font-mono text-slate-300">
+                    {blogRecord.content ? blogRecord.content.trim().split(/\s+/).filter(Boolean).length : 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Readability</span>
+                  <span className="text-base font-extrabold font-mono text-slate-300">
+                    {blogRecord.seoAnalysis?.readabilityScore || 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 font-bold uppercase block">Density</span>
+                  <span className="text-base font-extrabold font-mono text-slate-300">
+                    {blogRecord.seoAnalysis?.keywordDensity !== undefined ? `${blogRecord.seoAnalysis.keywordDensity}%` : '0%'}
+                  </span>
+                </div>
+              </div>
               
               {resolvedCoverImageUrl && (
                 <div className="w-full rounded-2xl overflow-hidden border border-white/5 max-h-[300px] bg-slate-950 select-none mb-6">
@@ -684,7 +813,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold tracking-tight text-white animate-pulse">Adapting Content for {resolvedPlatformName}</h3>
                     <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                      Restructuring canonical Markdown copy for **{resolvedPlatformName}** specific settings...
+                      Restructuring canonical Markdown copy for <strong>{resolvedPlatformName}</strong> specific settings...
                     </p>
                   </div>
                 </div>
@@ -701,7 +830,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold text-gradient">Adaptation Required</h3>
                     <p className="text-sm text-slate-400 max-w-sm mx-auto">
-                      No customized post rendered for **{resolvedPlatformName}** yet. Adapt the canonical content dynamically.
+                      No customized post rendered for <strong>{resolvedPlatformName}</strong> yet. Adapt the canonical content dynamically.
                     </p>
                   </div>
                   <button
@@ -718,6 +847,29 @@ export const BlogPreview = ({ blogId, onBack }) => {
                   <div className={`flex justify-end gap-2 ${
                     activeTab === 'linkedin' || activeTab === 'medium' || activeTab === 'devto' || activeTab === 'substack' ? 'max-w-2xl' : 'max-w-4xl'
                   } mx-auto px-1`}>
+                    {!isEditing && (
+                      <>
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 hover:border-white/20 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer mr-auto"
+                        >
+                          <FileText size={13} />
+                          <span>Edit Platform Copy</span>
+                        </button>
+                        <button
+                          onClick={handleOptimizeRender}
+                          disabled={(optimizeRenderTaskId && tasks[optimizeRenderTaskId]?.status === 'running')}
+                          className="px-3 py-1.5 bg-gradient-to-r from-emerald-500/10 to-emerald-500/20 hover:from-emerald-500/20 hover:to-emerald-500/30 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/30 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-glow-sm cursor-pointer mr-2"
+                        >
+                          {(optimizeRenderTaskId && tasks[optimizeRenderTaskId]?.status === 'running') ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Sparkles size={13} />
+                          )}
+                          <span>Auto Optimize SEO</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={handleCopy}
                       className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 hover:border-white/20 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
@@ -748,47 +900,161 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       <span>Regenerate</span>
                     </button>
                   </div>
+
+                  {/* Adapted SEO scorecard */}
+                  <div className={`grid grid-cols-4 gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl text-center text-xs ${
+                    activeTab === 'linkedin' || activeTab === 'medium' || activeTab === 'devto' || activeTab === 'substack' ? 'max-w-2xl' : 'max-w-4xl'
+                  } mx-auto`}>
+                    <div>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase block">Platform SEO Score</span>
+                      <span className={`text-base font-extrabold font-mono ${
+                        renderedRecord.seoScore >= 80 ? 'text-emerald-400' : renderedRecord.seoScore >= 50 ? 'text-amber-400' : 'text-rose-400'
+                      }`}>
+                        {renderedRecord.seoScore || 0}/100
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase block">Words</span>
+                      <span className="text-base font-extrabold font-mono text-slate-300">
+                        {renderedRecord.copy ? renderedRecord.copy.trim().split(/\s+/).filter(Boolean).length : 0}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase block">Readability</span>
+                      <span className="text-base font-extrabold font-mono text-slate-300">
+                        {renderedRecord.seoAnalysis?.readabilityScore || 0}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase block">Density</span>
+                      <span className="text-base font-extrabold font-mono text-slate-300">
+                        {renderedRecord.seoAnalysis?.keywordDensity !== undefined ? `${renderedRecord.seoAnalysis.keywordDensity}%` : '0%'}
+                      </span>
+                    </div>
+                  </div>
                   
-                  {activeTab === 'linkedin' && (
-                    <LinkedInPreview
-                      title={renderedRecord.title}
-                      copy={renderedRecord.copy}
-                      hashtags={renderedRecord.hashtags}
-                      imageUrl={resolvedCoverImageUrl}
-                    />
-                  )}
+                  {isEditing ? (
+                    <div className={`glass-card rounded-3xl border border-white/5 p-6 md:p-8 w-full ${
+                      activeTab === 'linkedin' || activeTab === 'medium' || activeTab === 'devto' || activeTab === 'substack' ? 'max-w-2xl' : 'max-w-4xl'
+                    } mx-auto space-y-4 text-left`}>
+                      <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider">Edit {resolvedPlatformName} Post</h4>
+                        <button
+                          onClick={() => setIsEditing(false)}
+                          className="p-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
 
-                  {activeTab === 'medium' && (
-                    <MediumPreview
-                      title={renderedRecord.title}
-                      copy={renderedRecord.copy}
-                      imageUrl={resolvedCoverImageUrl}
-                    />
-                  )}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400">Title / Headline Hook</label>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-xs font-semibold focus:outline-none focus:border-primary transition-colors"
+                        />
+                      </div>
 
-                  {activeTab === 'blog' && (
-                    <CompanyBlogPreview
-                      title={renderedRecord.title}
-                      copy={renderedRecord.copy}
-                      imageUrl={resolvedCoverImageUrl}
-                    />
-                  )}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400">Body Copy (Markdown)</label>
+                        <textarea
+                          rows={12}
+                          value={editCopy}
+                          onChange={(e) => setEditCopy(e.target.value)}
+                          className="w-full p-4 bg-background/60 border border-white/10 rounded-xl text-white text-xs font-mono leading-relaxed focus:outline-none focus:border-primary transition-colors resize-none"
+                        />
+                      </div>
 
-                  {activeTab === 'devto' && (
-                    <DevToPreview
-                      title={renderedRecord.title}
-                      copy={renderedRecord.copy}
-                      hashtags={renderedRecord.hashtags}
-                      imageUrl={resolvedCoverImageUrl}
-                    />
-                  )}
+                      {['linkedin', 'devto'].includes(activeTab) && (
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-slate-400">Hashtags (Comma Separated)</label>
+                          <input
+                            type="text"
+                            value={editHashtags.join(', ')}
+                            onChange={(e) => setEditHashtags(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                            className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors"
+                          />
+                        </div>
+                      )}
 
-                  {activeTab === 'substack' && (
-                    <SubstackPreview
-                      title={renderedRecord.title}
-                      copy={renderedRecord.copy}
-                      imageUrl={resolvedCoverImageUrl}
-                    />
+                      <div className="pt-4 flex justify-end gap-2 border-t border-white/5 mt-2">
+                        <button
+                          onClick={() => setIsEditing(false)}
+                          className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 hover:border-white/20 font-bold rounded-xl text-xs transition-all cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            updateRenderMutation.mutate({
+                              title: editTitle,
+                              copy: editCopy,
+                              hashtags: editHashtags,
+                            });
+                          }}
+                          disabled={updateRenderMutation.isPending}
+                          className="px-5 py-2 bg-gradient-to-r from-primary to-accent text-background font-extrabold rounded-xl text-xs transition-all shadow-glow flex items-center gap-1.5 cursor-pointer"
+                        >
+                          {updateRenderMutation.isPending ? (
+                            <>
+                              <Loader2 className="animate-spin" size={13} />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save size={13} />
+                              <span>Save Changes</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {activeTab === 'linkedin' && (
+                        <LinkedInPreview
+                          title={renderedRecord.title}
+                          copy={renderedRecord.copy}
+                          hashtags={renderedRecord.hashtags}
+                          imageUrl={resolvedCoverImageUrl}
+                        />
+                      )}
+
+                      {activeTab === 'medium' && (
+                        <MediumPreview
+                          title={renderedRecord.title}
+                          copy={renderedRecord.copy}
+                          imageUrl={resolvedCoverImageUrl}
+                        />
+                      )}
+
+                      {activeTab === 'blog' && (
+                        <CompanyBlogPreview
+                          title={renderedRecord.title}
+                          copy={renderedRecord.copy}
+                          imageUrl={resolvedCoverImageUrl}
+                        />
+                      )}
+
+                      {activeTab === 'devto' && (
+                        <DevToPreview
+                          title={renderedRecord.title}
+                          copy={renderedRecord.copy}
+                          hashtags={renderedRecord.hashtags}
+                          imageUrl={resolvedCoverImageUrl}
+                        />
+                      )}
+
+                      {activeTab === 'substack' && (
+                        <SubstackPreview
+                          title={renderedRecord.title}
+                          copy={renderedRecord.copy}
+                          imageUrl={resolvedCoverImageUrl}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               )}

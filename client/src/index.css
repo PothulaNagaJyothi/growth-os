@@ -50,6 +50,42 @@
   color: hsl(var(--primary)) !important;
 }
 
+/* Ensure high contrast white text on elements with dark/solid background hover classes */
+.hover\:bg-primary:hover,
+.hover\:bg-primary-dark:hover,
+.hover\:bg-primary-hover:hover,
+.hover\:bg-destructive:hover,
+.hover\:bg-slate-950:hover,
+.hover\:bg-slate-900:hover,
+.hover\:bg-slate-850:hover,
+.hover\:bg-slate-800:hover,
+.hover\:bg-slate-700:hover,
+.hover\:bg-slate-600:hover,
+.hover\:bg-red-600:hover,
+.hover\:bg-red-500:hover,
+.hover\:bg-black:hover,
+.hover\:bg-accent:hover {
+  color: #ffffff !important;
+}
+
+/* Ensure icons and other child elements inside these hovered elements inherit the white color */
+.hover\:bg-primary:hover *,
+.hover\:bg-primary-dark:hover *,
+.hover\:bg-primary-hover:hover *,
+.hover\:bg-destructive:hover *,
+.hover\:bg-slate-950:hover *,
+.hover\:bg-slate-900:hover *,
+.hover\:bg-slate-850:hover *,
+.hover\:bg-slate-800:hover *,
+.hover\:bg-slate-700:hover *,
+.hover\:bg-slate-600:hover *,
+.hover\:bg-red-600:hover *,
+.hover\:bg-red-500:hover *,
+.hover\:bg-black:hover *,
+.hover\:bg-accent:hover * {
+  color: inherit !important;
+}
+
 /* Glassmorphism card utility updated for light mode */
 .glass-card, [class*="glass-card"] {
   background: rgba(255, 255, 255, 0.75) !important;

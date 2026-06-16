@@ -19,7 +19,9 @@ import {
   Gauge,
   History,
   X,
-  ArrowLeft
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export const BlogEditor = ({ blogId, onBack }) => {
@@ -40,6 +42,7 @@ export const BlogEditor = ({ blogId, onBack }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [showSeoDetails, setShowSeoDetails] = useState(false);
 
   const triggerToast = (msg) => {
     setToastMessage(msg);
@@ -153,9 +156,24 @@ export const BlogEditor = ({ blogId, onBack }) => {
 
   const handleOptimize = () => {
     if (!blogRecord || !optimizeTaskId) return;
-    startTask(optimizeTaskId, async () => {
-      const response = await api.post(`/blogs/${blogRecord._id}/optimize`);
-      return response.data;
+    
+    // Save the latest editor values first, then run optimization
+    updateMutation.mutate({
+      title: title.trim(),
+      metaDescription: metaDescription.trim(),
+      content: content.trim(),
+      status,
+      publishDate: publishDate ? new Date(publishDate).toISOString() : null,
+      author: author.trim(),
+      keywordCategory: keywordCategory.trim(),
+      keyword: keyword.trim()
+    }, {
+      onSuccess: () => {
+        startTask(optimizeTaskId, async () => {
+          const response = await api.post(`/blogs/${blogRecord._id}/optimize`);
+          return response.data;
+        });
+      }
     });
   };
 
@@ -194,7 +212,7 @@ export const BlogEditor = ({ blogId, onBack }) => {
   const liveWordCount = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
   const wordCountValid = liveWordCount >= 800 && liveWordCount <= 1200;
   const h2Count = blogRecord?.seoAnalysis?.checks?.h2Count || 0;
-  const h2Valid = h2Count >= 4;
+  const h2Valid = h2Count >= 2;
   const h1Valid = blogRecord?.seoAnalysis?.checks?.keywordInH1 || false;
   const metaValid = !!metaDescription;
   const slugValid = !!blogRecord?.slug;
@@ -211,11 +229,11 @@ export const BlogEditor = ({ blogId, onBack }) => {
     <div className="space-y-6">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Check size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 
@@ -380,33 +398,67 @@ export const BlogEditor = ({ blogId, onBack }) => {
 
                 {/* Audit checklist */}
                 <div className="space-y-2 border-t border-white/5 pt-3 mt-4">
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="font-bold text-slate-400 uppercase tracking-widest font-mono">SEO checklist</span>
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-bold font-mono ${
-                      isValidationPassed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                    }`}>
-                      {isValidationPassed ? 'PASSED' : 'IMPROVE'}
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowSeoDetails(!showSeoDetails)}
+                    className="w-full flex justify-between items-center text-[10px] hover:text-white transition-colors group focus:outline-none"
+                  >
+                    <span className="font-bold text-slate-400 uppercase tracking-widest font-mono group-hover:text-slate-200">SEO checklist (13 Checks)</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-bold font-mono ${
+                        blogRecord?.seoScore >= 80 ? 'bg-emerald-500/10 text-emerald-400' :
+                        blogRecord?.seoScore >= 50 ? 'bg-amber-500/10 text-amber-400' :
+                        'bg-rose-500/10 text-rose-400'
+                      }`}>
+                        {blogRecord?.seoScore >= 80 ? 'EXCELLENT' : blogRecord?.seoScore >= 50 ? 'GOOD' : 'NEEDS WORK'}
+                      </span>
+                      {showSeoDetails ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
+                    </div>
+                  </button>
 
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] mt-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className={wordCountValid ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>{wordCountValid ? '✓' : '✗'}</span>
-                      <span className="text-slate-300">Length: {liveWordCount}w</span>
+                  {showSeoDetails && (
+                    <div className="space-y-3 mt-3 animate-fade-in text-left">
+                      <div className="grid grid-cols-1 gap-1.5 text-[11px] max-h-60 overflow-y-auto pr-1">
+                        {[
+                          { label: 'Word Count (800-1200)', value: wordCountValid, info: `${liveWordCount} words` },
+                          { label: 'Keyword in Title', value: !!blogRecord?.seoAnalysis?.checks?.keywordInTitle },
+                          { label: 'Keyword in Meta Description', value: !!blogRecord?.seoAnalysis?.checks?.keywordInMetaDescription },
+                          { label: 'Keyword in First Paragraph', value: !!blogRecord?.seoAnalysis?.checks?.keywordInFirstParagraph },
+                          { label: 'Keyword in H1 Heading', value: !!blogRecord?.seoAnalysis?.checks?.keywordInH1 },
+                          { label: 'Keyword in URL Slug', value: !!blogRecord?.seoAnalysis?.checks?.keywordInSlug },
+                          { label: 'Min 2 H2 Subheadings', value: h2Valid, info: `Found ${h2Count}` },
+                          { label: 'Min 1 H3 Subheading', value: (blogRecord?.seoAnalysis?.checks?.h3Count || 0) >= 1, info: `Found ${blogRecord?.seoAnalysis?.checks?.h3Count || 0}` },
+                          { label: 'FAQ Section Included', value: !!blogRecord?.seoAnalysis?.checks?.faqPresence },
+                          { label: 'Conclusion Included', value: !!blogRecord?.seoAnalysis?.checks?.conclusionPresence },
+                          { label: 'Internal Links', value: (blogRecord?.seoAnalysis?.checks?.internalLinks || 0) >= 1, info: `Found ${blogRecord?.seoAnalysis?.checks?.internalLinks || 0}` },
+                          { label: 'External Links', value: (blogRecord?.seoAnalysis?.checks?.externalLinks || 0) >= 1, info: `Found ${blogRecord?.seoAnalysis?.checks?.externalLinks || 0}` },
+                          { label: 'Image Alt Text Configured', value: !!blogRecord?.seoAnalysis?.checks?.imageAltText }
+                        ].map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-white/[0.02] border border-white/5 px-2.5 py-1.5 rounded-xl hover:bg-white/[0.04] transition-colors">
+                            <div className="flex flex-col text-left">
+                              <span className="text-slate-300 font-semibold text-[10px]">{item.label}</span>
+                              {item.info && <span className="text-[8px] text-slate-500 font-mono font-medium">{item.info}</span>}
+                            </div>
+                            <span className={`text-[10px] font-bold ${item.value ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {item.value ? '✓ Passed' : '✗ Improve'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Actionable Google Recommendations */}
+                      {blogRecord?.seoAnalysis?.recommendations && blogRecord.seoAnalysis.recommendations.length > 0 && (
+                        <div className="border-t border-white/5 pt-2.5 mt-2.5 space-y-1.5">
+                          <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider block">Google Ranking Action Items:</span>
+                          <ul className="list-disc ml-4 space-y-1 text-[10px] text-slate-400 leading-normal max-h-32 overflow-y-auto pr-1">
+                            {blogRecord.seoAnalysis.recommendations.map((rec, i) => (
+                              <li key={i}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={h2Valid ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>{h2Valid ? '✓' : '✗'}</span>
-                      <span className="text-slate-300">Min 4 H2s: {h2Count}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={h1Valid ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>{h1Valid ? '✓' : '✗'}</span>
-                      <span className="text-slate-300">H1 Keyword</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={conclusionValid ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>{conclusionValid ? '✓' : '✗'}</span>
-                      <span className="text-slate-300">Conclusion</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 

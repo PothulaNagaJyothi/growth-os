@@ -55,6 +55,7 @@ export const AuthProvider = ({ children }) => {
       if (response.data && response.data.success) {
         const { token, user: userData } = response.data;
         localStorage.setItem('token', token);
+        localStorage.setItem('is-new-signup', 'true');
         setUser(userData);
       }
     } catch (error) {

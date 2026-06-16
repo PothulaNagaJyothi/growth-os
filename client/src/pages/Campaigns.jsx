@@ -245,11 +245,11 @@ export const Campaigns = () => {
     <div className="space-y-6 relative">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Check size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 

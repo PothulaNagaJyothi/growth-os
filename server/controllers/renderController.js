@@ -2,7 +2,9 @@ const PlatformConfig = require('../models/PlatformConfig');
 const RenderedBlog = require('../models/RenderedBlog');
 const Blog = require('../models/Blog');
 const Topic = require('../models/Topic');
+const Company = require('../models/Company');
 const aiService = require('../services/aiService');
+const seoAnalyzer = require('../services/seo-engine/seoAnalyzer');
 
 // @desc    Generate a platform-specific adapted blog post dynamically reading rules from MongoDB
 // @route   POST /api/render/:platform
@@ -51,6 +53,10 @@ exports.generatePlatformRender = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Not authorized to render this content' });
     }
 
+    const company = await Company.findById(blog.companyId);
+    const companyWebsite = company?.website || '';
+    const targetKeyword = blog.keyword || '';
+
     const campaign = blog.topicId || { 
       topic: blog.keyword || 'General Topic', 
       goal: 'General Branding', 
@@ -64,12 +70,27 @@ exports.generatePlatformRender = async (req, res, next) => {
 
     let lengthInstruction = "";
     const lowerPlatform = platform.toLowerCase();
-    if (lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack' || lowerPlatform === 'linkedin') {
+    const isLongForm = lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack';
+    
+    if (isLongForm) {
       lengthInstruction = `\n\nCRITICAL REQUIREMENT FOR LONG-FORM CONTENT:
-Since this is a ${config.platformName} post, it MUST be a highly detailed, comprehensive, and structured article (aim for 600 to 800 words). Do NOT summarize or condense it into a short post, but keep it concise enough to fit the output budget without truncation. Retain the core technical explanations, code blocks, and structured lists from the canonical post.`;
+Since this is a ${config.platformName} post, it MUST be a highly detailed, comprehensive, and structured article (aim for 800 to 1200 words). Do NOT summarize or condense it into a short post, but keep it concise enough to fit the output budget without truncation. Retain the core technical explanations, code blocks, and structured lists from the canonical post.`;
     } else {
       lengthInstruction = `\n\nCRITICAL REQUIREMENT FOR SOCIAL FEEDS:
 Since this is a ${config.platformName} post, keep it punchy, engaging, and suitable for a social media feed (aim for 200-400 words).`;
+    }
+
+    let seoPreservationPrompt = "";
+    if (isLongForm) {
+      seoPreservationPrompt = `
+5. SEO VIABILITY PRESERVATION RULES:
+   You MUST maintain the high SEO quality of the canonical post so it ranks high on Google. You must:
+   - Include the target keyword ("${targetKeyword}") naturally in the title, first paragraph, and inside the H1/H2 headings.
+   - Use H2 and H3 headers to structure sections.
+   - Preserve all internal links (pointing to "${companyWebsite}") and external links exactly as they are in the canonical post.
+   - Include any images with their markdown syntax and alt texts.
+   - Retain the FAQ section and Conclusion/Summary section at the end of the post.
+   - Maintain the detailed, comprehensive style with 800 to 1200 words.`;
     }
 
     // 3. Build Dynamic Prompts incorporating MongoDB Configuration Rules
@@ -87,7 +108,7 @@ You MUST strictly adhere to the following dynamic rules configured in MongoDB:
    "${config.seoRules}"
 
 4. CTA & CONVERSIONS RULES:
-   "${config.ctaRules}"${lengthInstruction}
+   "${config.ctaRules}"${lengthInstruction}${seoPreservationPrompt}
 
 Your response MUST be returned strictly in a valid JSON object format matching the exact structure below. Do not wrap the JSON payload in markdown backticks or any other decorators.
 
@@ -119,7 +140,6 @@ Render the tailored JSON payload now:`;
     // 4. Dispatch completions query via reusable aiService
     let renderedPayload;
     try {
-      const isLongForm = lowerPlatform === 'medium' || lowerPlatform === 'company-blog' || lowerPlatform === 'company blog' || lowerPlatform === 'dev.to' || lowerPlatform === 'dev-to' || lowerPlatform === 'substack' || lowerPlatform === 'linkedin';
       const responseText = await aiService.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -466,6 +486,17 @@ This architecture directly addresses our campaign goal: *"${campaign.goal || 're
       };
     }
 
+    // Calculate SEO Analysis & Score for the adapted blog
+    const seoAnalysis = seoAnalyzer.analyze(
+      renderedPayload.title,
+      renderedPayload.copy,
+      renderedPayload.metaDescription || '',
+      targetKeyword,
+      blog.slug,
+      companyWebsite,
+      config.platformName
+    );
+
     // 5. Save or Upsert record inside MongoDB
     const renderedBlog = await RenderedBlog.findOneAndUpdate(
       { blogId, platformName: config.platformName },
@@ -477,6 +508,8 @@ This architecture directly addresses our campaign goal: *"${campaign.goal || 're
         copy: renderedPayload.copy,
         hashtags: renderedPayload.hashtags || [],
         metaDescription: renderedPayload.metaDescription || '',
+        seoScore: seoAnalysis.seoScore,
+        seoAnalysis: seoAnalysis,
       },
       {
         new: true,
@@ -512,6 +545,26 @@ exports.getRenderedBlog = async (req, res, next) => {
     // Verify company context
     if (rendered.companyId.toString() !== req.user.companyId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to access this rendered content' });
+    }
+
+    // Self-healing recalculation check for legacy rendered blogs
+    if (!rendered.seoAnalysis || Object.keys(rendered.seoAnalysis).length === 0) {
+      console.log('[RENDER CONTROLLER] Recalculating missing SEO score on getRenderedBlog...');
+      const targetKeyword = rendered.blogId?.keyword || '';
+      const company = await Company.findById(rendered.companyId);
+      const companyWebsite = company?.website || '';
+      const seoAnalysis = seoAnalyzer.analyze(
+        rendered.title,
+        rendered.copy,
+        rendered.metaDescription || '',
+        targetKeyword,
+        rendered.blogId?.slug || 'post',
+        companyWebsite,
+        rendered.platformName
+      );
+      rendered.seoScore = seoAnalysis.seoScore;
+      rendered.seoAnalysis = seoAnalysis;
+      await rendered.save();
     }
 
     res.status(200).json({
@@ -560,6 +613,26 @@ exports.getRenderByBlogAndPlatform = async (req, res, next) => {
       });
     }
 
+    // Self-healing recalculation check for legacy rendered blogs
+    if (!rendered.seoAnalysis || Object.keys(rendered.seoAnalysis).length === 0) {
+      console.log('[RENDER CONTROLLER] Recalculating missing SEO score on getRenderByBlogAndPlatform...');
+      const targetKeyword = rendered.blogId?.keyword || '';
+      const company = await Company.findById(rendered.companyId);
+      const companyWebsite = company?.website || '';
+      const seoAnalysis = seoAnalyzer.analyze(
+        rendered.title,
+        rendered.copy,
+        rendered.metaDescription || '',
+        targetKeyword,
+        rendered.blogId?.slug || 'post',
+        companyWebsite,
+        rendered.platformName
+      );
+      rendered.seoScore = seoAnalysis.seoScore;
+      rendered.seoAnalysis = seoAnalysis;
+      await rendered.save();
+    }
+
     res.status(200).json({
       success: true,
       data: rendered,
@@ -568,3 +641,119 @@ exports.getRenderByBlogAndPlatform = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Update rendered blog details (manual platform edits)
+// @route   PUT /api/render/:id
+// @access  Private
+exports.updateRenderedBlog = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
+    }
+
+    let rendered = await RenderedBlog.findById(req.params.id).populate('blogId');
+
+    if (!rendered) {
+      return res.status(404).json({ success: false, error: 'Rendered post not found' });
+    }
+
+    // Verify company context
+    if (rendered.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to modify this rendered content' });
+    }
+
+    const { title, copy, hashtags, metaDescription } = req.body;
+
+    if (title !== undefined) rendered.title = title;
+    if (copy !== undefined) rendered.copy = copy;
+    if (hashtags !== undefined) rendered.hashtags = hashtags;
+    if (metaDescription !== undefined) rendered.metaDescription = metaDescription;
+
+    // Recalculate SEO Analysis & Score for this platform
+    const targetKeyword = rendered.blogId?.keyword || '';
+    const company = await Company.findById(rendered.companyId);
+    const companyWebsite = company?.website || '';
+
+    const seoAnalysis = seoAnalyzer.analyze(
+      rendered.title,
+      rendered.copy,
+      rendered.metaDescription || '',
+      targetKeyword,
+      rendered.blogId?.slug || 'post',
+      companyWebsite,
+      rendered.platformName
+    );
+
+    rendered.seoScore = seoAnalysis.seoScore;
+    rendered.seoAnalysis = seoAnalysis;
+
+    await rendered.save();
+
+    res.status(200).json({
+      success: true,
+      data: rendered,
+      message: 'Platform rendered blog updated successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Optimize platform-specific rendered blog SEO automatically if score < 80
+// @route   POST /api/render/:id/optimize
+// @access  Private
+exports.optimizeRenderedBlog = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
+    }
+
+    const rendered = await RenderedBlog.findById(req.params.id).populate('blogId');
+
+    if (!rendered) {
+      return res.status(404).json({ success: false, error: 'Rendered post not found' });
+    }
+
+    // Verify company ownership context
+    if (rendered.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to optimize this content' });
+    }
+
+    const oldScore = rendered.seoScore;
+
+    // Call optimizer service
+    const seoOptimizer = require('../services/seo-engine/seoOptimizer');
+    const optimizationResult = await seoOptimizer.optimizeRendered(rendered, rendered.seoAnalysis);
+
+    if (optimizationResult.optimized) {
+      rendered.title = optimizationResult.title;
+      rendered.copy = optimizationResult.copy;
+      rendered.hashtags = optimizationResult.hashtags;
+      rendered.metaDescription = optimizationResult.metaDescription;
+      rendered.seoScore = optimizationResult.newScore;
+      rendered.seoAnalysis = optimizationResult.seoAnalysis;
+
+      await rendered.save();
+
+      res.status(200).json({
+        success: true,
+        oldScore,
+        newScore: rendered.seoScore,
+        improvements: optimizationResult.improvements,
+        message: 'Platform post optimized successfully'
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        oldScore,
+        newScore: oldScore,
+        improvements: [],
+        message: optimizationResult.message || 'Platform post SEO score is already 80 or higher.'
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+

@@ -115,6 +115,11 @@ class AIService {
 Generate trending news summary, keyword suggestions, competitor gaps, search intent analysis, and suggested blog angles.
 You MUST respond strictly in a valid JSON object format matching the exact structure below. Do not wrap it in markdown codeblocks.
 
+CRITICAL RULES:
+1. KEYWORD SUGGESTIONS: Keywords MUST be short, punchy search terms (1 to 4 words max) derived from the Topic Short Name and Industry context. Do NOT use the long Topic Details sentence as a keyword.
+2. SUGGESTED BLOG ANGLES: Angles must be brief, clear title ideas (under 12 words) using the Topic Short Name. Do NOT repeat the entire long Topic Details sentence in the title suggestions.
+3. COMPETITOR ANALYSIS: Do NOT include raw markdown formatting characters (like asterisks '*' for bold/italic) directly inside competitor gap details. Format cleanly.
+
 Required JSON Structure:
 {
   "news": "A comprehensive summary detailing recent trending industry news, announcements, or updates related to the campaign topic. Format in rich Markdown.",
@@ -142,7 +147,9 @@ COMPANY:
 - brandVoice: ${company.brandVoice}
 - competitors: ${company.competitors ? company.competitors.join(', ') : 'None'}
 
-CAMPAIGN Topic: ${campaign.topic}
+TOPIC Focus:
+- Short Name: ${campaign.topicName || 'General Topic'}
+- Details: ${campaign.topic}
 Goal: ${campaign.goal}
 Keywords: ${campaign.keywords ? campaign.keywords.join(', ') : 'None'}
 
@@ -174,15 +181,15 @@ Generate JSON payload now:`;
     } catch (err) {
       console.warn('[AI SERVICE WARNING] generateResearch failed. Sourcing local resilient mock fallback...', err.message);
       return {
-        news: `### Sourced Trending News: ${campaign.topic}\nRecent shifts indicate that automated pipelines in ${company.industry} are rapidly expanding. Competitors are scaling back on standard copy.`,
+        news: `### Sourced Trending News: ${campaign.topicName || 'Career Mapping'}\nRecent shifts indicate that automated pipelines in ${company.industry} are rapidly expanding. Competitors are scaling back on standard copy.`,
         keywords: [
-          { keyword: `best ${campaign.topic} tools`, volume: 'High', difficulty: 'Hard', intent: 'Commercial' },
-          { keyword: `how to implement ${campaign.topic}`, volume: 'Medium', difficulty: 'Easy', intent: 'Informational' }
+          { keyword: `best ${campaign.topicName || 'career mapping'} tools`, volume: 'High', difficulty: 'Hard', intent: 'Commercial' },
+          { keyword: `how to implement ${campaign.topicName || 'career mapping'}`, volume: 'Medium', difficulty: 'Easy', intent: 'Informational' }
         ],
-        competitorAnalysis: `### Competitor Gaps & Search Intent\n- Legacy Players: completely fail to cover advanced integration methods for *${campaign.topic}*. Targeting low-difficulty informational queries represents a massive intent void.`,
+        competitorAnalysis: `### Competitor Gaps & Search Intent\n- Legacy Players: completely fail to cover advanced integration methods for ${campaign.topicName || 'Career Mapping'}. Targeting low-difficulty informational queries represents a massive intent void.`,
         suggestedAngles: [
-          `Title: The Blueprint to Scaling ${campaign.topic} for ${persona.audienceType}`,
-          `Title: Why standard ${campaign.topic} setups fail at volume (and the ${persona.tone} fix)`
+          `Title: The Scaling Guide to ${campaign.topicName || 'Career Mapping'} for ${persona.audienceType}`,
+          `Title: Why standard ${campaign.topicName || 'Career Mapping'} setups fail at volume (and the ${persona.tone} fix)`
         ]
       };
     }
@@ -191,7 +198,7 @@ Generate JSON payload now:`;
   /**
    * Service Method 2: generateCanonicalBlog()
    */
-  async generateCanonicalBlog(campaign, persona, research, knowledgeContext, seoBrief = null) {
+  async generateCanonicalBlog(campaign, persona, research, knowledgeContext, seoBrief = null, customAngle = null) {
     let briefInstruction = "";
     if (seoBrief) {
       briefInstruction = `
@@ -218,9 +225,15 @@ CRITICAL CONTENT REQUIREMENTS:
 5. STRUCTURE: The content MUST contain:
    - An H1 heading at the very beginning of the content.
    - A minimum of 4 H2 headings throughout the body.
+   - At least two H3 subheadings (Markdown '###' format) nested within H2 sections.
+   - An FAQ section towards the end of the post under an H3 header (e.g. "### Frequently Asked Questions") containing at least 2 questions and answers.
+   - A concluding section at the end under an H2 header containing a standard conclusion keyword (e.g., "Conclusion", "Key Takeaways", "Summary").
    - Short paragraphs for readability.
    - Practical examples illustrating key points.
-   - A concluding section at the end under an H2 header containing a standard conclusion keyword (e.g., "Conclusion", "Summary", "Key Takeaways", "Wrapping Up", or "Final Thoughts").
+   - At least one internal/relative link (e.g. [internal link text](/dashboard) or similar relative path) integrated naturally.
+   - At least one external link to an authoritative source (e.g. [Google Search](https://search.google.com/search-console/about)) integrated naturally.
+   - At least one illustrative image tag in markdown format with descriptive alt text (e.g. ![Strategic Growth Map](https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80)).
+${customAngle ? `CRITICAL TARGET ANGLE REQUIREMENT: You MUST base the title and the content strategy around this specific copy angle/title hook: "${customAngle}".\n` : ''}
 ${briefInstruction}
 Your response MUST be a valid JSON object matching the exact structure below. Do not wrap in markdown codeblocks.
 
@@ -236,7 +249,7 @@ Required JSON Structure:
       "talkingPoints": ["Talking point 1", "Talking point 2"]
     }
   ],
-  "content": "Full length (800-1200 words) comprehensive blog content in Markdown format, starting with an H1 heading, followed by a minimum of 4 H2 sections, using short paragraphs, practical examples, and ending with a Conclusion section."
+  "content": "Full length (800-1200 words) comprehensive blog content in Markdown format, starting with an H1 heading, followed by a minimum of 4 H2 sections, nested H3 subheadings, an FAQ section, internal and external links, an alt-texted markdown image, and ending with a Conclusion section."
 }`;
 
     const userPrompt = `Generate a canonical blog post:
@@ -428,9 +441,14 @@ CRITICAL CONTENT REQUIREMENTS:
 5. STRUCTURE: The content MUST contain:
    - An H1 heading at the very beginning of the content.
    - A minimum of 4 H2 headings throughout the body.
+   - At least two H3 subheadings (Markdown '###' format) nested within H2 sections.
+   - An FAQ section towards the end of the post under an H3 header (e.g. "### Frequently Asked Questions") containing at least 2 questions and answers.
+   - A concluding section at the end under an H2 header containing a standard conclusion keyword (e.g., "Conclusion", "Key Takeaways", "Summary").
    - Short paragraphs for readability.
    - Practical examples illustrating key points.
-   - A concluding section at the end under an H2 header containing a standard conclusion keyword (e.g., "Conclusion", "Summary", "Key Takeaways", "Wrapping Up", or "Final Thoughts").
+   - At least one internal/relative link (e.g. [internal link text](/dashboard) or similar relative path) integrated naturally.
+   - At least one external link to an authoritative source (e.g. [Google Search](https://search.google.com/search-console/about)) integrated naturally.
+   - At least one illustrative image tag in markdown format with descriptive alt text (e.g. ![Strategic Growth Map](https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80)).
 ${briefInstruction}
 Your response MUST be a valid JSON object matching the exact structure below. Do not wrap in markdown codeblocks.
 
@@ -446,7 +464,7 @@ Required JSON Structure:
       "talkingPoints": ["Key talking point 1", "Key talking point 2"]
     }
   ],
-  "content": "Full length (800-1200 words) comprehensive blog content in Markdown format, starting with an H1 heading, followed by a minimum of 4 H2 sections, using short paragraphs, practical examples, and ending with a Conclusion section."
+  "content": "Full length (800-1200 words) comprehensive blog content in Markdown format, starting with an H1 heading, followed by a minimum of 4 H2 sections, nested H3 subheadings, an FAQ section, internal and external links, an alt-texted markdown image, and ending with a Conclusion section."
 }`;
 
     const userPrompt = `Generate a canonical blog post:
@@ -820,17 +838,35 @@ PLATFORM: ${platform || 'General'}`;
       throw new Error('Azure OpenAI credentials or Image API Key are missing from the environment configuration.');
     }
 
+    // Map custom/platform dimensions to closest DALL-E 3 supported preset
+    let resolvedDimensions = '1024x1024';
+    if (dimensions) {
+      const parts = dimensions.toLowerCase().split('x');
+      if (parts.length === 2) {
+        const w = parseInt(parts[0], 10) || 1024;
+        const h = parseInt(parts[1], 10) || 1024;
+        const ratio = w / h;
+        if (ratio >= 1.3) {
+          resolvedDimensions = '1792x1024';
+        } else if (ratio <= 0.77) {
+          resolvedDimensions = '1024x1792';
+        } else {
+          resolvedDimensions = '1024x1024';
+        }
+      }
+    }
+
     const apiVersion = '2023-12-01-preview';
     const url = `${endpoint}/openai/deployments/gpt-image-2/images/generations?api-version=${apiVersion}`;
 
     try {
-      console.log(`[AI SERVICE] Generating DALL-E Image using prompt: "${prompt.slice(0, 60)}..." and size: ${dimensions}...`);
+      console.log(`[AI SERVICE] Generating DALL-E Image using prompt: "${prompt.slice(0, 60)}..." and resolved size: ${resolvedDimensions} (requested: ${dimensions})...`);
       const response = await axios.post(
         url,
         {
           prompt,
           n: 1,
-          size: dimensions
+          size: resolvedDimensions
         },
         {
           headers: {
@@ -958,6 +994,107 @@ Please condense it now:`;
 
     console.log(`[CONTENT LENGTH CORRECTION] Completed. Final word count = ${wordCount}`);
     return adjustedContent;
+  }
+
+  /**
+   * Service Method: suggestSEOKeywords()
+   */
+  async suggestSEOKeywords(topicName, topicDetails, company) {
+    const systemPrompt = `You are a professional SEO copywriter and strategist.
+Given a topic name, detailed description, and company profile, generate 4 to 6 highly relevant, search-volume optimized SEO keywords (each keyword must be 1 to 3 words max).
+Return STRICTLY a valid JSON object matching the exact structure below. Do not wrap in markdown codeblocks.
+
+Required JSON Structure:
+{
+  "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+}`;
+
+    const userPrompt = `Generate SEO keywords for:
+COMPANY Name: ${company.companyName}
+Industry: ${company.industry}
+Description: ${company.productDescription}
+
+TOPIC Name: ${topicName}
+Details: ${topicDetails}
+
+Generate JSON payload now:`;
+
+    try {
+      const responseText = await this.queryAI([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ], { temperature: 0.6, max_tokens: 500 });
+
+      let cleanText = responseText.trim();
+      if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
+      if (cleanText.endsWith('```')) cleanText = cleanText.substring(0, cleanText.length - 3);
+      cleanText = cleanText.trim();
+
+      const parsed = JSON.parse(cleanText);
+      if (parsed.keywords && Array.isArray(parsed.keywords)) {
+        return parsed.keywords.map(k => k.toLowerCase().replace(/#/g, '').trim());
+      }
+      throw new Error('Sourced AI JSON is missing keywords array.');
+    } catch (err) {
+      console.warn('[AI SERVICE WARNING] suggestSEOKeywords failed. Using fallback keywords...', err.message);
+      return [
+        topicName.toLowerCase().replace(/[^a-z0-9\s]+/g, '').split(' ').slice(0, 3).join(' '),
+        'career tech',
+        'job matching',
+        'grad employability'
+      ].filter(Boolean);
+    }
+  }
+
+  /**
+   * Analyze brand logo using Vision to extract color scheme
+   */
+  async analyzeLogoColors(imageUrl) {
+    const systemPrompt = `You are a Visual Identity Designer.
+Analyze the company logo and identify the dominant brand colors.
+Respond ONLY with a JSON object containing two fields:
+1. "colors": an array of HEX strings of the top 3-5 dominant colors (e.g., ["#F25B18", "#181C25"])
+2. "description": a concise, single-sentence description of the brand color palette (e.g., "A combination of warm coral orange, dark slate, and clean white accents.")
+
+Do not output any markdown code blocks, backticks, or extra text. Just raw JSON.`;
+
+    const userContent = [
+      {
+        type: 'text',
+        text: `Extract the dominant color palette from this logo.`
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: imageUrl
+        }
+      }
+    ];
+
+    try {
+      console.log('[AI SERVICE] Calling vision to extract colors from uploaded logo:', imageUrl);
+      const responseText = await this.queryAI([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ], {
+        temperature: 0.2,
+        max_completion_tokens: 150,
+        apiVersion: '2024-02-15-preview'
+      });
+      
+      let cleanText = responseText.trim();
+      if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
+      if (cleanText.endsWith('```')) cleanText = cleanText.substring(0, cleanText.length - 3);
+      cleanText = cleanText.trim();
+      
+      return JSON.parse(cleanText);
+    } catch (err) {
+      console.error('[AI SERVICE ERROR] analyzeLogoColors vision call failed:', err.message);
+      return {
+        colors: [],
+        description: 'Default light theme palette'
+      };
+    }
   }
 }
 

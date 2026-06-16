@@ -26,7 +26,7 @@ if (hasCloudinary) {
  * @param {String} fileName - Sourced file name
  * @returns {Promise<Object>} - Sourced URL and asset key metadata
  */
-exports.uploadBuffer = (fileBuffer, fileName) => {
+exports.uploadBuffer = (fileBuffer, fileName, options = {}) => {
   return new Promise((resolve, reject) => {
     if (hasCloudinary) {
       // Stream upload directly to Cloudinary
@@ -35,6 +35,7 @@ exports.uploadBuffer = (fileBuffer, fileName) => {
           folder: 'growth-os-knowledge',
           resource_type: 'auto', // Auto-detect format (image or raw doc)
           public_id: `${Date.now()}_${path.parse(fileName).name}`,
+          ...options,
         },
         (error, result) => {
           if (error) {

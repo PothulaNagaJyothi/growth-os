@@ -133,3 +133,34 @@ exports.deleteTopic = async (req, res, next) => {
     next(error);
   }
 };
+
+const aiService = require('../services/aiService');
+const Company = require('../models/Company');
+
+// @desc    Suggest SEO keywords based on topic details and company info
+// @route   POST /api/topics/suggest-keywords
+// @access  Private
+exports.suggestKeywords = async (req, res, next) => {
+  try {
+    const { topicName, topic } = req.body;
+    if (!topicName || !topic) {
+      return res.status(400).json({ success: false, error: 'Topic name and details are required' });
+    }
+
+    // Fetch company info
+    const company = await Company.findById(req.user.companyId) || {
+      companyName: 'UDEN Tech',
+      industry: 'EdTech',
+      brandVoice: 'Professional',
+      productDescription: 'AI career placement'
+    };
+
+    const suggested = await aiService.suggestSEOKeywords(topicName, topic, company);
+    res.status(200).json({
+      success: true,
+      data: suggested
+    });
+  } catch (error) {
+    next(error);
+  }
+};

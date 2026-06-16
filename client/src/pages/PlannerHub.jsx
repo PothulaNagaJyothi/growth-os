@@ -16,18 +16,13 @@ export const PlannerHub = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="glass-card rounded-3xl p-8 border border-white/5 relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 space-y-2">
-          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest font-mono">
-            <Sparkles size={14} />
-            <span>Editorial Hub</span>
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-white">Content Planner</h2>
-          <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-            Plan, schedule, and automate your blog posts across LinkedIn, Medium, Dev.to, Substack, and your website. Keep track of publication pipelines in one calendar view.
-          </p>
-        </div>
+      <div className="space-y-1 text-left mb-6">
+        <h2 className="text-2xl font-extrabold tracking-tight text-white">
+          Content Planner
+        </h2>
+        <p className="text-xs text-slate-400 leading-relaxed font-normal max-w-3xl">
+          Plan, schedule, and automate your blog posts across LinkedIn, Medium, Dev.to, Substack, and your website.
+        </p>
       </div>
 
       {/* Tabs Navigation */}

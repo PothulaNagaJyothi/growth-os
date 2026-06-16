@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useTasks } from '../context/TaskContext';
 import {
@@ -19,15 +20,30 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-export const Research = () => {
+export const Research = ({ selectedTopicId: propTopicId, setSelectedTopicId: setPropTopicId }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { tasks, startTask, clearTask } = useTasks();
 
   // Tab navigation inside details report
   const [activeTab, setActiveTab] = useState('news'); // 'news', 'keywords', 'gaps', 'angles'
   
   // Selected topic to run research for
-  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [selectedTopicId, setSelectedTopicId] = useState(propTopicId || '');
+
+  // Synchronize state with props
+  useEffect(() => {
+    if (propTopicId) {
+      setSelectedTopicId(propTopicId);
+    }
+  }, [propTopicId]);
+
+  // Synchronize local changes back up
+  useEffect(() => {
+    if (setPropTopicId && selectedTopicId && selectedTopicId !== propTopicId) {
+      setPropTopicId(selectedTopicId);
+    }
+  }, [selectedTopicId, propTopicId, setPropTopicId]);
 
   // Status notifications
   const [showToast, setShowToast] = useState(false);
@@ -126,11 +142,11 @@ export const Research = () => {
     <div className="space-y-6 relative">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Check size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 
@@ -216,20 +232,17 @@ export const Research = () => {
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-white/5 flex items-center justify-between mt-auto" onClick={(e) => e.stopPropagation()}>
-                        <span className="text-[10px] text-slate-500 font-mono capitalize">
-                          {t.status}
-                        </span>
+                      <div className="pt-4 border-t border-white/5 flex items-center justify-end mt-auto" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setSelectedTopicId(t._id)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 active:scale-[0.97] hover:scale-[1.02] ${
                             hasResearch
-                              ? 'bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10'
+                              ? 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-primary hover:text-white hover:border-primary hover:shadow-md'
                               : 'bg-gradient-to-r from-primary to-accent text-background hover:opacity-90 shadow-glow-sm'
                           }`}
                         >
                           <Sparkles size={12} />
-                          <span>{hasResearch ? 'View Intelligence' : 'Synthesize'}</span>
+                          <span>{hasResearch ? 'View Intelligence' : 'Run AI Research'}</span>
                         </button>
                       </div>
                     </div>
@@ -307,13 +320,13 @@ export const Research = () => {
 
                 {/* Monospace Logs */}
                 <div className="w-full max-w-md p-4 rounded-xl bg-black/60 border border-white/5 text-left font-mono text-[10px] text-primary space-y-1.5 shadow-2xl">
-                  <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2 mb-2">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2 mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                     <span>SYSTEM SYNTHESIS STATUS</span>
                     <span className="animate-pulse text-emerald-400">● EXECUTION OPEN</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 size={10} />
-                    <span>[DB] Verified active Blog Topic: "{activeTopic?.topic || 'N/A'}"</span>
+                    <span>[DB] Verified active Blog Topic: "{activeTopic?.topicName || 'N/A'}"</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-400">
                     <CheckCircle2 size={10} />
@@ -323,7 +336,7 @@ export const Research = () => {
                     <Loader2 size={10} className="animate-spin" />
                     <span>[AI] Synthesizing Trending News feeds & Competitor content gaps...</span>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-600">
+                  <div className="flex items-center gap-2" style={{ color: 'rgba(255, 255, 255, 0.45)' }}>
                     <span>[AI] Constructing search intent difficulty index table...</span>
                   </div>
                 </div>
@@ -351,7 +364,7 @@ export const Research = () => {
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold text-gradient">No Research Available</h3>
                   <p className="text-sm text-slate-400 max-w-md mx-auto">
-                    No market intelligence has been synthesized for the topic **"{activeTopic?.topicName || 'Selected Topic'}"** yet. Trigger the AI synthesis engine to generate results.
+                    No market intelligence has been compiled for the topic <strong>"{activeTopic?.topicName || 'Selected Topic'}"</strong> yet. Trigger the AI research engine to generate results.
                   </p>
                 </div>
 
@@ -380,7 +393,7 @@ export const Research = () => {
                   className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-background font-bold rounded-xl shadow-glow transition-all hover:opacity-90 flex items-center gap-2"
                 >
                   <Sparkles size={16} />
-                  <span>Synthesize Research Now</span>
+                  <span>Run AI Research Now</span>
                 </button>
               </div>
             ) : (
@@ -404,7 +417,7 @@ export const Research = () => {
                     className="px-4 py-2 border border-primary/30 hover:border-primary bg-primary/5 hover:bg-primary/15 text-primary text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 self-start sm:self-center shadow-glow-sm cursor-pointer disabled:opacity-50"
                   >
                     <Zap size={13} />
-                    <span>Rerun Synthesis</span>
+                    <span>Rerun AI Research</span>
                   </button>
                 </div>
 
@@ -461,11 +474,17 @@ export const Research = () => {
                       {researchRecord.news ? (
                         researchRecord.news.split('\n').map((line, idx) => {
                           const trimmed = line.trim();
-                          if (trimmed.startsWith('###')) {
-                            return <h4 key={idx} className="text-base font-bold text-white mt-4 mb-2">{trimmed.replace('###', '')}</h4>;
-                          }
                           if (trimmed.startsWith('####')) {
-                            return <h5 key={idx} className="text-sm font-bold text-primary mt-3 mb-1">{trimmed.replace('####', '')}</h5>;
+                            return <h5 key={idx} className="text-sm font-bold text-primary mt-3 mb-1">{trimmed.replace(/^#+\s*/, '')}</h5>;
+                          }
+                          if (trimmed.startsWith('###')) {
+                            return <h4 key={idx} className="text-base font-bold text-white mt-4 mb-2">{trimmed.replace(/^#+\s*/, '')}</h4>;
+                          }
+                          if (trimmed.startsWith('##')) {
+                            return <h3 key={idx} className="text-lg font-bold text-white mt-5 mb-2">{trimmed.replace(/^#+\s*/, '')}</h3>;
+                          }
+                          if (trimmed.startsWith('#')) {
+                            return <h2 key={idx} className="text-xl font-bold text-white mt-6 mb-3">{trimmed.replace(/^#+\s*/, '')}</h2>;
                           }
                           if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
                             return <li key={idx} className="list-disc ml-5 mb-1.5">{trimmed.substring(1).trim()}</li>;
@@ -551,11 +570,17 @@ export const Research = () => {
                       {researchRecord.competitorAnalysis ? (
                         researchRecord.competitorAnalysis.split('\n').map((line, idx) => {
                           const trimmed = line.trim();
-                          if (trimmed.startsWith('###')) {
-                            return <h4 key={idx} className="text-base font-bold text-white mt-4 mb-2">{trimmed.replace('###', '')}</h4>;
-                          }
                           if (trimmed.startsWith('####')) {
-                            return <h5 key={idx} className="text-sm font-bold text-accent mt-3 mb-1">{trimmed.replace('####', '')}</h5>;
+                            return <h5 key={idx} className="text-sm font-bold text-accent mt-3 mb-1">{trimmed.replace(/^#+\s*/, '')}</h5>;
+                          }
+                          if (trimmed.startsWith('###')) {
+                            return <h4 key={idx} className="text-base font-bold text-white mt-4 mb-2">{trimmed.replace(/^#+\s*/, '')}</h4>;
+                          }
+                          if (trimmed.startsWith('##')) {
+                            return <h3 key={idx} className="text-lg font-bold text-white mt-5 mb-2">{trimmed.replace(/^#+\s*/, '')}</h3>;
+                          }
+                          if (trimmed.startsWith('#')) {
+                            return <h2 key={idx} className="text-xl font-bold text-white mt-6 mb-3">{trimmed.replace(/^#+\s*/, '')}</h2>;
                           }
                           if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
                             return <li key={idx} className="list-disc ml-5 mb-1.5">{trimmed.substring(1).trim()}</li>;
@@ -583,16 +608,19 @@ export const Research = () => {
                         {researchRecord.suggestedAngles?.map((angle, idx) => (
                           <div
                             key={idx}
-                            className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-primary/20 hover:bg-white/10 transition-all flex items-start gap-4"
+                            onClick={() => {
+                              navigate(`/blogs?view=generate&topicId=${selectedTopicId}&customAngle=${encodeURIComponent(angle)}`);
+                            }}
+                            className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 hover:bg-white/10 transition-all flex items-start gap-4 cursor-pointer group/angle"
                           >
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-glow-sm">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-glow-sm group-hover/angle:bg-primary group-hover/angle:text-background transition-all">
                               0{idx + 1}
                             </div>
                             <div className="space-y-1.5 pr-2">
-                              <p className="text-xs font-semibold text-white leading-relaxed">{angle}</p>
-                              <span className="inline-block text-[8px] font-mono font-bold bg-white/5 text-primary border border-primary/20 px-2 py-0.5 rounded uppercase tracking-wider">
-                                Ready to generate
-                              </span>
+                              <p className="text-xs font-semibold text-white leading-relaxed group-hover/angle:text-primary transition-colors">{angle}</p>
+                              <button className="inline-block text-[8px] font-mono font-bold bg-primary/10 text-primary border border-primary/30 group-hover/angle:bg-primary group-hover/angle:text-background px-2.5 py-1 rounded uppercase tracking-wider transition-all">
+                                Ready to generate &rarr;
+                              </button>
                             </div>
                           </div>
                         ))}

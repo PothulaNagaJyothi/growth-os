@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Settings } from './Settings';
 import { Personas } from './Personas';
 import { KnowledgeBase } from './KnowledgeBase';
 import { Building2, Users2, FileArchive, Sparkles } from 'lucide-react';
 
 export const BrandSetup = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    if (location.state && location.state.activeTab) {
+      return location.state.activeTab;
+    }
+    const params = new URLSearchParams(location.search);
+    return params.get('tab') || 'profile';
+  });
 
   const tabs = [
     { id: 'profile', label: 'Company Profile', icon: <Building2 size={16} />, component: <Settings /> },
@@ -18,19 +26,13 @@ export const BrandSetup = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="glass-card rounded-3xl p-8 border border-white/5 relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 space-y-2">
-          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest font-mono">
-            <Sparkles size={14} />
-            <span>Brand Engine Setup</span>
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-white">Brand Setup</h2>
-          <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-            Consolidate your company details, target reader personas, and reference knowledge base files. 
-            The blog generation models automatically ground themselves in these settings.
-          </p>
-        </div>
+      <div className="space-y-1 text-left mb-6">
+        <h2 className="text-2xl font-extrabold tracking-tight text-white">
+          Brand Setup
+        </h2>
+        <p className="text-xs text-slate-400 leading-relaxed font-normal max-w-3xl">
+          Configure company details, audience personas, and upload reference grounding files.
+        </p>
       </div>
 
       {/* Tabs Navigation */}

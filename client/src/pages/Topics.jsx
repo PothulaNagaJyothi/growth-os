@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   Compass,
@@ -19,11 +20,22 @@ import {
   X
 } from 'lucide-react';
 
-export const Topics = () => {
+export const Topics = ({ onNavigateToResearch }) => {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Navigation / Modal View modes
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Auto-open modal if requested via router state redirect
+  useEffect(() => {
+    if (location.state?.openTopicModal) {
+      setModalOpen(true);
+      // Clear location state to prevent repeating on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
   const [editTopicId, setEditTopicId] = useState(null);
   const [viewTopicDetails, setViewTopicDetails] = useState(null);
 
@@ -34,15 +46,18 @@ export const Topics = () => {
   const [keywords, setKeywords] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [goal, setGoal] = useState('');
-  const [status, setStatus] = useState('draft');
+  const [status, setStatus] = useState('active');
 
   // Tag inputs helper
   const [newKeyword, setNewKeyword] = useState('');
+  const [suggestingKeywords, setSuggestingKeywords] = useState(false);
 
   // Notices
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [suggestResearchModalOpen, setSuggestResearchModalOpen] = useState(false);
+  const [createdTopicId, setCreatedTopicId] = useState(null);
 
   // 1. React Query: List topics
   const { data: topicsData, isLoading: topicsLoading, isError: topicsError, error: tErr } = useQuery({
@@ -68,10 +83,14 @@ export const Topics = () => {
       const response = await api.post('/topics', payload);
       return response.data.data;
     },
-    onSuccess: () => {
+    onSuccess: (newTopic) => {
       queryClient.invalidateQueries({ queryKey: ['topics'] });
       triggerToast('Blog Topic created successfully!');
       closeModal();
+      if (newTopic && newTopic._id) {
+        setCreatedTopicId(newTopic._id);
+        setSuggestResearchModalOpen(true);
+      }
     }
   });
 
@@ -121,7 +140,7 @@ export const Topics = () => {
     setKeywords([]);
     setPlatforms([]);
     setGoal('');
-    setStatus('draft');
+    setStatus('active');
     setValidationError('');
     setModalOpen(true);
   };
@@ -135,7 +154,7 @@ export const Topics = () => {
     setKeywords(t.keywords || []);
     setPlatforms(t.platforms || []);
     setGoal(t.goal || '');
-    setStatus(t.status || 'draft');
+    setStatus(t.status || 'active');
     setValidationError('');
     setModalOpen(true);
   };
@@ -179,6 +198,36 @@ export const Topics = () => {
     setKeywords(keywords.filter(k => k !== keywordToRemove));
   };
 
+  const handleSuggestKeywords = async () => {
+    if (!topicName.trim() || !topic.trim()) return;
+    setSuggestingKeywords(true);
+    try {
+      const response = await api.post('/topics/suggest-keywords', {
+        topicName: topicName.trim(),
+        topic: topic.trim()
+      });
+      const suggested = response.data.data || [];
+      if (suggested.length > 0) {
+        const merged = [...keywords];
+        suggested.forEach(kw => {
+          const clean = kw.toLowerCase().trim();
+          if (clean && !merged.includes(clean)) {
+            merged.push(clean);
+          }
+        });
+        setKeywords(merged);
+        triggerToast('AI suggested keywords added successfully!');
+      } else {
+        triggerToast('No keywords generated.');
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to suggest keywords.');
+    } finally {
+      setSuggestingKeywords(false);
+    }
+  };
+
   // Submit form
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -208,7 +257,7 @@ export const Topics = () => {
       keywords,
       platforms,
       goal: goal.trim(),
-      status
+      status: 'active'
     };
 
     if (editTopicId) {
@@ -244,11 +293,11 @@ export const Topics = () => {
     <div className="space-y-6 relative">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Check size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 
@@ -534,7 +583,7 @@ export const Topics = () => {
 
             {/* Modal Body Form */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-              
+
               {/* Form Validation Warnings */}
               {validationError && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs">
@@ -545,7 +594,9 @@ export const Topics = () => {
 
               {/* Topic Name */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Topic Name *</label>
+                <label className="text-xs font-semibold text-slate-400 flex items-center">
+                  Topic Name <span className="text-rose-500 font-bold ml-1">*</span>
+                </label>
                 <input
                   type="text"
                   required
@@ -558,7 +609,9 @@ export const Topics = () => {
 
               {/* Topic Detail */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Target Core Topic Details *</label>
+                <label className="text-xs font-semibold text-slate-400 flex items-center">
+                  Target Core Topic Details <span className="text-rose-500 font-bold ml-1">*</span>
+                </label>
                 <input
                   type="text"
                   required
@@ -571,7 +624,9 @@ export const Topics = () => {
 
               {/* Persona Selection Dropdown */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Target Audience Persona *</label>
+                <label className="text-xs font-semibold text-slate-400 flex items-center">
+                  Target Audience Persona <span className="text-rose-500 font-bold ml-1">*</span>
+                </label>
                 <select
                   required
                   value={personaId}
@@ -585,16 +640,28 @@ export const Topics = () => {
                     </option>
                   ))}
                 </select>
-                {personasData?.length === 0 && (
-                  <p className="text-[10px] text-amber-400 pt-1 italic">
-                    No active personas discovered. Please create a persona in Brand Setup first!
-                  </p>
-                )}
+                {personasData?.length === 0 ? (
+                  <div className="pt-2 space-y-1.5 animate-pulse">
+                    <p className="text-[10px] text-amber-400 italic">
+                      No active personas discovered. Please create an audience persona in Brand Setup.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/brand?tab=personas&redirect=topics')}
+                      className="px-4 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Plus size={12} />
+                      <span>Create a Persona Now</span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               {/* Targeted Platforms Grid Checklist */}
               <div className="space-y-2 pt-1">
-                <label className="text-xs font-semibold text-slate-400">Target Multi-Channel Platforms *</label>
+                <label className="text-xs font-semibold text-slate-400 flex items-center">
+                  Target Multi-Channel Platforms <span className="text-rose-500 font-bold ml-1">*</span>
+                </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {['linkedin', 'medium', 'company-blog', 'dev-to', 'substack'].map((plat) => {
                     const active = platforms.includes(plat);
@@ -618,7 +685,27 @@ export const Topics = () => {
 
               {/* Keywords Tag Manager */}
               <div className="space-y-1.5 pt-1">
-                <label className="text-xs font-semibold text-slate-400">Target SEO Keywords</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-slate-400">Target SEO Keywords</label>
+                  <button
+                    type="button"
+                    onClick={handleSuggestKeywords}
+                    disabled={suggestingKeywords || !topicName.trim() || !topic.trim()}
+                    className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:no-underline"
+                  >
+                    {suggestingKeywords ? (
+                      <>
+                        <Loader2 size={10} className="animate-spin" />
+                        <span>Suggesting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={10} />
+                        <span>Suggest via AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -673,20 +760,6 @@ export const Topics = () => {
                 />
               </div>
 
-              {/* Status & Options Grid */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Topic Operations Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary cursor-pointer"
-                >
-                  <option value="draft" className="bg-surface">Draft</option>
-                  <option value="active" className="bg-surface">Active</option>
-                  <option value="completed" className="bg-surface">Completed</option>
-                </select>
-              </div>
-
               {/* Submit triggers */}
               <div className="pt-4 flex justify-end gap-3">
                 <button
@@ -709,7 +782,7 @@ export const Topics = () => {
                   ) : (
                     <>
                       <Check size={16} />
-                      <span>{editTopicId ? 'Save Changes' : 'Initialize Topic'}</span>
+                      <span>{editTopicId ? 'Save Changes' : 'Create Topic'}</span>
                     </>
                   )}
                 </button>
@@ -717,6 +790,51 @@ export const Topics = () => {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Suggest Research Confirmation Modal */}
+      {suggestResearchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md glass-card rounded-2xl border border-white/10 shadow-2xl p-6 space-y-4 text-left">
+            <div className="flex items-center gap-3 text-primary">
+              <Sparkles size={24} className="animate-pulse" />
+              <h3 className="text-lg font-bold text-white text-base">Unlock High-Performance SEO 🔍</h3>
+            </div>
+            
+            <p className="text-xs text-slate-350 leading-relaxed">
+              You've successfully saved your blog topic! To make this post highly effective, we suggest running <strong>AI Market Research</strong> next. 
+            </p>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              This gathers trending industry news, performs competitor gap audits, and extracts targeted keywords to guide the blog copywriting model.
+            </p>
+
+            <div className="pt-2 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSuggestResearchModalOpen(false);
+                  setCreatedTopicId(null);
+                }}
+                className="px-4 py-2 bg-white/5 border border-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Maybe Later
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSuggestResearchModalOpen(false);
+                  if (onNavigateToResearch && createdTopicId) {
+                    onNavigateToResearch(createdTopicId);
+                  }
+                  setCreatedTopicId(null);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-background font-bold rounded-xl shadow-glow text-xs cursor-pointer flex items-center gap-1.5"
+              >
+                Go to Research Engine
+              </button>
+            </div>
           </div>
         </div>
       )}

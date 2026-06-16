@@ -14,7 +14,107 @@ class SEOAnalyzer {
    * @param {String} slug - URL Slug
    * @returns {Object} The complete SEO Analysis payload
    */
-  analyze(title = '', content = '', metaDescription = '', keyword = '', slug = '') {
+  analyze(title = '', content = '', metaDescription = '', keyword = '', slug = '', companyWebsite = '', platformName = '') {
+    // ----------------------------------------
+    // Custom LinkedIn Social SEO Analysis Rules
+    // ----------------------------------------
+    if (platformName && platformName.toLowerCase() === 'linkedin') {
+      const recommendations = [];
+      const checks = {
+        emojiInTitle: false,
+        hashtagCount: 0,
+        wordCount: 0,
+        ctaEngagement: false,
+        readabilityValid: false
+      };
+
+      const cleanTitle = (title || '').trim();
+      const cleanContent = (content || '').trim();
+
+      // 1. Emoji in Title (20 points)
+      let scoreEmoji = 0;
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
+      if (emojiRegex.test(cleanTitle)) {
+        checks.emojiInTitle = true;
+        scoreEmoji = 20;
+      } else {
+        recommendations.push('Start your title hook with an engaging emoji to increase visibility.');
+      }
+
+      // 2. Hashtags (20 points)
+      let scoreHashtags = 0;
+      const hashMatches = cleanContent.match(/#\w+/g);
+      const hashCount = hashMatches ? hashMatches.length : 0;
+      checks.hashtagCount = hashCount;
+      if (hashCount >= 3 && hashCount <= 6) {
+        scoreHashtags = 20;
+      } else if (hashCount > 0) {
+        scoreHashtags = 10;
+        recommendations.push('Include between 3 and 5 relevant tactical hashtags at the bottom.');
+      } else {
+        recommendations.push('Add 3-5 relevant tactical hashtags at the very bottom.');
+      }
+
+      // 3. Word Count (20 points)
+      let scoreWordCount = 0;
+      const words = cleanContent ? cleanContent.split(/\s+/).filter(w => w.length > 0) : [];
+      const wordCount = words.length;
+      checks.wordCount = wordCount;
+      if (wordCount >= 200 && wordCount <= 500) {
+        scoreWordCount = 20;
+      } else if (wordCount > 0) {
+        scoreWordCount = 10;
+        recommendations.push(`Aim for a mobile-friendly length of 200-500 words (current: ${wordCount} words).`);
+      } else {
+        recommendations.push('Add body copy for the post.');
+      }
+
+      // 4. CTA Engagement (20 points)
+      let scoreCta = 0;
+      const ctaRegex = /(?:comment|share|thoughts|experiences|below|what\s+do\s+you|feedback|agree|disagree)/i;
+      if (ctaRegex.test(cleanContent)) {
+        checks.ctaEngagement = true;
+        scoreCta = 20;
+      } else {
+        recommendations.push('Conclude with an engaging call-to-action asking readers to leave their thoughts in the comments.');
+      }
+
+      // 5. Readability (20 points)
+      let scoreReadability = 0;
+      let readabilityScore = 100;
+      if (wordCount > 0) {
+        const sentences = cleanContent.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        const sentenceCount = sentences.length;
+        if (sentenceCount > 0) {
+          const avgSentenceLength = wordCount / sentenceCount;
+          readabilityScore = Math.round(Math.max(20, Math.min(100, 100 - (avgSentenceLength - 12) * 3)));
+        }
+      }
+      if (readabilityScore >= 75) {
+        checks.readabilityValid = true;
+        scoreReadability = 20;
+      } else {
+        recommendations.push('Break up long sentences to improve mobile readability.');
+      }
+
+      const totalScore = scoreEmoji + scoreHashtags + scoreWordCount + scoreCta + scoreReadability;
+
+      return {
+        score: totalScore,
+        seoScore: totalScore,
+        readabilityScore,
+        keywordDensity: 0,
+        titleScore: scoreEmoji * 5,
+        metaScore: 100,
+        headingScore: 100,
+        checks,
+        recommendations
+      };
+    }
+
+    // ----------------------------------------
+    // Standard Long-Form Blog SEO Analysis Rules
+    // ----------------------------------------
     const recommendations = [];
     const checks = {
       keywordInTitle: false,
@@ -244,6 +344,15 @@ class SEOAnalyzer {
       }
     }
 
+    let cleanCompanyDomain = '';
+    if (companyWebsite) {
+      cleanCompanyDomain = companyWebsite
+        .toLowerCase()
+        .replace(/^(https?:\/\/)?(www\.)?/, '')
+        .split('/')[0]
+        .trim();
+    }
+
     let internalLinksCount = 0;
     let externalLinksCount = 0;
 
@@ -251,12 +360,13 @@ class SEOAnalyzer {
       if (url.startsWith('#') || url.startsWith('mailto:') || url.startsWith('tel:')) {
         continue; // anchor links / email links don't count
       }
-      // Check if relative link or points to our site
+      // Check if relative link or points to our site or company website
       const isInternal = url.startsWith('/') && !url.startsWith('//') ||
                          url.toLowerCase().includes('growthos.com') ||
                          url.toLowerCase().includes('growth-os-system') ||
-                         url.toLowerCase().includes('localhost');
-                         
+                         url.toLowerCase().includes('localhost') ||
+                         (cleanCompanyDomain && url.toLowerCase().includes(cleanCompanyDomain));
+                          
       if (isInternal) {
         internalLinksCount++;
       } else if (url.startsWith('http://') || url.startsWith('https://')) {

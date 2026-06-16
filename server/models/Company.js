@@ -35,6 +35,14 @@ const CompanySchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    brandColors: {
+      type: [String],
+      default: [],
+    },
+    brandColorsDescription: {
+      type: String,
+      default: '',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

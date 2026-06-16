@@ -3,6 +3,8 @@ const {
   generatePlatformRender,
   getRenderedBlog,
   getRenderByBlogAndPlatform,
+  updateRenderedBlog,
+  optimizeRenderedBlog,
 } = require('../controllers/renderController');
 const { protect } = require('../middleware/auth');
 
@@ -13,6 +15,9 @@ router.use(protect);
 
 router.post('/:platform', generatePlatformRender);
 router.get('/blog/:blogId/platform/:platformName', getRenderByBlogAndPlatform);
+router.put('/:id', updateRenderedBlog);
+router.post('/:id/optimize', optimizeRenderedBlog);
 router.get('/:id', getRenderedBlog);
 
 module.exports = router;
+

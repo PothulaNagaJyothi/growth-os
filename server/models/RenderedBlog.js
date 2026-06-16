@@ -33,6 +33,14 @@ const RenderedBlogSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    seoScore: {
+      type: Number,
+      default: 0,
+    },
+    seoAnalysis: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,

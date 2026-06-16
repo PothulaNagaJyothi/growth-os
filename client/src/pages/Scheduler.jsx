@@ -230,17 +230,17 @@ export const Scheduler = () => {
     <div className="space-y-6 relative">
       {/* Alert Banner */}
       {alert.show && (
-        <div className={`fixed top-20 right-6 z-50 glass-card border px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in ${
+        <div className={`fixed top-20 right-6 z-50 glass-card border px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in bg-white/95 ${
           alert.type === 'success' 
-            ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-200' 
-            : 'bg-rose-950/80 border-rose-500/30 text-rose-200'
+            ? 'border-primary/20 text-foreground' 
+            : 'border-red-500/25 text-foreground'
         }`}>
           <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-            alert.type === 'success' ? 'bg-emerald-500/20' : 'bg-rose-500/20'
+            alert.type === 'success' ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-500'
           }`}>
-            {alert.type === 'success' ? <Check size={14} className="text-emerald-400" /> : <AlertCircle size={14} className="text-rose-400" />}
+            {alert.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
           </div>
-          <span className="font-semibold text-xs font-mono">{alert.message}</span>
+          <span className="font-semibold text-slate-800 text-xs font-mono">{alert.message}</span>
         </div>
       )}
 

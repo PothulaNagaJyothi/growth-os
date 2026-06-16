@@ -1,14 +1,37 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Topics } from './Topics';
 import { Research } from './Research';
 import { Compass, Search, Sparkles } from 'lucide-react';
 
 export const TopicsHub = () => {
-  const [activeTab, setActiveTab] = useState('topics');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    if (location.state && location.state.activeTab) {
+      return location.state.activeTab;
+    }
+    return 'topics';
+  });
+  const [selectedTopicId, setSelectedTopicId] = useState('');
+
+  const handleNavigateToResearch = (topicId) => {
+    setSelectedTopicId(topicId);
+    setActiveTab('research');
+  };
 
   const tabs = [
-    { id: 'topics', label: 'Blog Topics', icon: <Compass size={16} />, component: <Topics /> },
-    { id: 'research', label: 'Market Research', icon: <Search size={16} />, component: <Research /> }
+    { 
+      id: 'topics', 
+      label: 'Blog Topics', 
+      icon: <Compass size={16} />, 
+      component: <Topics onNavigateToResearch={handleNavigateToResearch} /> 
+    },
+    { 
+      id: 'research', 
+      label: 'Market Research', 
+      icon: <Search size={16} />, 
+      component: <Research selectedTopicId={selectedTopicId} setSelectedTopicId={setSelectedTopicId} /> 
+    }
   ];
 
   const currentTab = tabs.find(t => t.id === activeTab);
@@ -16,18 +39,13 @@ export const TopicsHub = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="glass-card rounded-3xl p-8 border border-white/5 relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 space-y-2">
-          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest font-mono">
-            <Sparkles size={14} />
-            <span>SEO Ideation & Exploration</span>
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-white">Topics & Research</h2>
-          <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-            Create high-potential blog topics and conduct real-time SEO research using our agents to extract the latest market trends.
-          </p>
-        </div>
+      <div className="space-y-1 text-left mb-6">
+        <h2 className="text-2xl font-extrabold tracking-tight text-white">
+          Topics & Research
+        </h2>
+        <p className="text-xs text-slate-400 leading-relaxed font-normal max-w-3xl">
+          Create blog topics and conduct real-time agentic SEO research to audit competitor gaps and news.
+        </p>
       </div>
 
       {/* Tabs Navigation */}

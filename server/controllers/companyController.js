@@ -1,5 +1,7 @@
 const Company = require('../models/Company');
 const User = require('../models/User');
+const cloudinaryService = require('../services/cloudinaryService');
+const aiService = require('../services/aiService');
 
 // @desc    Get active company details
 // @route   GET /api/company
@@ -76,6 +78,24 @@ exports.updateCompany = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Not authorized to modify this company' });
     }
 
+    // Identify colors from URL or base64 image if logo was updated manually
+    const isBase64Logo = req.body.logo && req.body.logo.startsWith('data:image/');
+    const isHttpLogo = req.body.logo && req.body.logo.startsWith('http');
+    if (req.body.logo && req.body.logo !== company.logo && (isHttpLogo || isBase64Logo)) {
+      try {
+        const analysis = await aiService.analyzeLogoColors(req.body.logo);
+        if (analysis) {
+          req.body.brandColors = analysis.colors || [];
+          req.body.brandColorsDescription = analysis.description || '';
+        }
+      } catch (visionErr) {
+        console.warn('[COMPANY CONTROLLER WARNING] Vision logo color analysis from URL failed:', visionErr.message);
+      }
+    } else if (req.body.logo === '') {
+      req.body.brandColors = [];
+      req.body.brandColorsDescription = '';
+    }
+
     company = await Company.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
@@ -89,3 +109,136 @@ exports.updateCompany = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Upload company logo, optimize file size, analyze brand colors via Vision AI
+// @route   POST /api/company/upload-logo
+// @access  Private
+// @headers Content-Type: multipart/form-data
+exports.uploadLogo = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(404).json({ success: false, error: 'No company profile associated with this user context' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No logo image file provided' });
+    }
+
+    // 1. Upload file buffer to Cloudinary with max 400x400 limit, auto quality, and webp/optimal format
+    const uploadOptions = {
+      transformation: [
+        { width: 400, height: 400, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
+      ]
+    };
+
+    const storageResult = await cloudinaryService.uploadBuffer(req.file.buffer, req.file.originalname, uploadOptions);
+    const logoUrl = storageResult.url;
+
+    // 2. Invoke Vision AI to analyze logo colors
+    let brandColors = [];
+    let brandColorsDescription = '';
+
+    try {
+      // If we uploaded to Cloudinary, we can pass the remote logoUrl.
+      // Otherwise (local fallback), we pass the base64 data URL constructed from the uploaded file buffer.
+      let imageToAnalyze = logoUrl;
+      if (!logoUrl.startsWith('http') && req.file && req.file.buffer) {
+        const base64Data = req.file.buffer.toString('base64');
+        const mimeType = req.file.mimetype || 'image/png';
+        imageToAnalyze = `data:${mimeType};base64,${base64Data}`;
+      }
+
+      const analysis = await aiService.analyzeLogoColors(imageToAnalyze);
+      if (analysis) {
+        brandColors = analysis.colors || [];
+        brandColorsDescription = analysis.description || '';
+      }
+    } catch (visionErr) {
+      console.warn('[COMPANY CONTROLLER WARNING] Vision logo color analysis failed:', visionErr.message);
+      brandColorsDescription = 'Logo uploaded successfully. Ready for asset generation.';
+    }
+
+    // 3. Update Company schema record
+    const updatedCompany = await Company.findByIdAndUpdate(
+      req.user.companyId,
+      {
+        logo: logoUrl,
+        brandColors,
+        brandColorsDescription,
+      },
+      { new: true }
+    );
+
+    if (!updatedCompany) {
+      return res.status(404).json({ success: false, error: 'Associated company profile record not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedCompany,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete company logo and clear brand colors
+// @route   DELETE /api/company/delete-logo
+// @access  Private
+exports.deleteLogo = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(404).json({ success: false, error: 'No company profile associated with this user context' });
+    }
+
+    const company = await Company.findById(req.user.companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, error: 'Company not found' });
+    }
+
+    // Clean up old logo asset file from Cloudinary or local uploads
+    if (company.logo) {
+      try {
+        if (company.logo.includes('res.cloudinary.com')) {
+          const parts = company.logo.split('/upload/');
+          if (parts.length > 1) {
+            const pathParts = parts[1].split('/');
+            const publicIdWithExt = pathParts.slice(1).join('/');
+            const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
+            await cloudinaryService.deleteAsset(publicId);
+          }
+        } else if (company.logo.startsWith('/uploads/')) {
+          const filename = company.logo.replace('/uploads/', '');
+          await cloudinaryService.deleteAsset(filename);
+        }
+      } catch (cleanupErr) {
+        console.warn('[COMPANY CONTROLLER WARNING] Logo file cleanup failed:', cleanupErr.message);
+      }
+    }
+
+    // Update database record to clear logo fields
+    const updatedCompany = await Company.findByIdAndUpdate(
+      req.user.companyId,
+      {
+        logo: '',
+        brandColors: [],
+        brandColorsDescription: '',
+      },
+      { new: true }
+    );
+
+    if (!updatedCompany) {
+      return res.status(404).json({ success: false, error: 'Associated company profile record not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedCompany,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+

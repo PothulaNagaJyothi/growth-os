@@ -14,7 +14,7 @@ const contentValidator = require('../services/content-engine/contentValidator');
 // @access  Private
 exports.generateBlog = async (req, res, next) => {
   try {
-    const { topicId, blogId, keyword, targetAudience, tone } = req.body;
+    const { topicId, blogId, keyword, targetAudience, tone, customAngle } = req.body;
     if (!topicId && (!keyword || !targetAudience || !tone)) {
       return res.status(400).json({ 
         success: false, 
@@ -27,6 +27,9 @@ exports.generateBlog = async (req, res, next) => {
     }
 
     // Resolve grounding knowledge context
+    const company = await Company.findById(req.user.companyId);
+    const companyWebsite = company?.website || '';
+
     const knowledgeDocs = await KnowledgeBase.find({ companyId: req.user.companyId });
     let knowledgeContext = '';
     if (knowledgeDocs && knowledgeDocs.length > 0) {
@@ -91,7 +94,8 @@ exports.generateBlog = async (req, res, next) => {
         persona,
         research,
         knowledgeContext,
-        seoBrief
+        seoBrief,
+        customAngle
       );
     } else {
       // Direct keyword-driven generation flow
@@ -123,7 +127,8 @@ exports.generateBlog = async (req, res, next) => {
       finalContent,
       finalMeta,
       resolvedKeyword,
-      finalSlug
+      finalSlug,
+      companyWebsite
     );
     let finalSeoScore = finalSeoAnalysis.seoScore;
     let initialVersion = null;
@@ -416,12 +421,15 @@ exports.updateBlog = async (req, res, next) => {
 
     // Recalculate SEO Analysis & Score
     const targetKeyword = blog.keyword || '';
+    const company = await Company.findById(blog.companyId);
+    const companyWebsite = company?.website || '';
     const seoAnalysis = seoAnalyzer.analyze(
       blog.title,
       blog.content,
       blog.metaDescription,
       targetKeyword,
-      blog.slug
+      blog.slug,
+      companyWebsite
     );
     blog.seoScore = seoAnalysis.seoScore;
     blog.seoAnalysis = seoAnalysis;
@@ -652,12 +660,15 @@ exports.restoreBlogVersion = async (req, res, next) => {
 
     // Recalculate SEO analysis
     const targetKeyword = blog.keyword || '';
+    const company = await Company.findById(blog.companyId);
+    const companyWebsite = company?.website || '';
     const seoAnalysis = seoAnalyzer.analyze(
       blog.title,
       blog.content,
       blog.metaDescription,
       targetKeyword,
-      blog.slug
+      blog.slug,
+      companyWebsite
     );
     blog.seoScore = seoAnalysis.seoScore;
     blog.seoAnalysis = seoAnalysis;

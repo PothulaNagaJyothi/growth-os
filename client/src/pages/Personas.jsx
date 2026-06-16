@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   UserPlus,
@@ -18,6 +19,8 @@ import {
 
 export const Personas = () => {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Modal open states & Edit modes
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,6 +58,11 @@ export const Personas = () => {
       queryClient.invalidateQueries({ queryKey: ['personas'] });
       triggerToast('Persona created successfully!');
       closeModal();
+      
+      const params = new URLSearchParams(location.search);
+      if (params.get('redirect') === 'topics' || (location.state && location.state.redirect === 'topics')) {
+        navigate('/topics', { state: { openTopicModal: true } });
+      }
     }
   });
 
@@ -166,11 +174,11 @@ export const Personas = () => {
     <div className="space-y-6 relative">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Check size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 
@@ -358,7 +366,8 @@ export const Personas = () => {
                     <div className="pt-4 border-t border-white/5 flex items-center justify-end mt-auto gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openEditModal(persona)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5 hover:border-white/10 transition-all rounded-xl font-bold text-xs"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 transition-all duration-200 rounded-xl font-bold text-xs cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
+                        style={{ color: undefined }}
                         title="Edit Persona"
                       >
                         <Edit2 size={13} />
@@ -366,7 +375,8 @@ export const Personas = () => {
                       </button>
                       <button
                         onClick={() => handleDelete(persona._id)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500/5 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-red-500/10 transition-all rounded-xl font-bold text-xs hover:border-red-500/20"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 hover:border-red-500/30 transition-all duration-200 rounded-xl font-bold text-xs cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
+                        style={{ color: undefined }}
                         title="Delete Persona"
                       >
                         <Trash2 size={13} />
@@ -504,7 +514,7 @@ export const Personas = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-5 py-2.5 bg-white/5 border border-white/10 text-slate-300 hover:text-white rounded-xl text-sm font-semibold transition-colors"
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-800 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
                 >
                   Cancel
                 </button>

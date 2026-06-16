@@ -15,10 +15,10 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-export const BlogGenerator = ({ onBack, onGenerationComplete }) => {
+export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGenerationComplete }) => {
   const queryClient = useQueryClient();
   const { tasks, startTask, clearTask } = useTasks();
-  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [selectedTopicId, setSelectedTopicId] = useState(initialTopicId || '');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -81,7 +81,10 @@ export const BlogGenerator = ({ onBack, onGenerationComplete }) => {
   const handleGenerate = () => {
     if (!selectedTopicId || !taskId) return;
     startTask(taskId, async () => {
-      const response = await api.post('/blogs/generate', { topicId: selectedTopicId });
+      const response = await api.post('/blogs/generate', { 
+        topicId: selectedTopicId,
+        customAngle: initialCustomAngle
+      });
       return response.data.data;
     });
   };
@@ -92,11 +95,11 @@ export const BlogGenerator = ({ onBack, onGenerationComplete }) => {
     <div className="space-y-6">
       {/* Floating Success Notification */}
       {showToast && (
-        <div className="fixed top-20 right-6 z-50 glass-card bg-emerald-950/80 border border-emerald-500/30 text-emerald-200 text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <CheckCircle2 size={14} className="text-emerald-400" />
+        <div className="fixed top-20 right-6 z-50 glass-card bg-white/95 border border-primary/20 text-foreground text-sm px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <CheckCircle2 size={14} />
           </div>
-          <span className="font-semibold">{toastMessage}</span>
+          <span className="font-semibold text-slate-800">{toastMessage}</span>
         </div>
       )}
 
@@ -132,7 +135,7 @@ export const BlogGenerator = ({ onBack, onGenerationComplete }) => {
 
           {/* Telemetry Console logs */}
           <div className="w-full max-w-md p-4 rounded-xl bg-black/60 border border-white/5 text-left font-mono text-[10px] text-primary space-y-1.5 shadow-2xl">
-            <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2 mb-2">
+            <div className="flex justify-between items-center border-b border-white/5 pb-2 mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
               <span>SYSTEM GENERATION LOGS</span>
               <span className="animate-pulse text-emerald-400">● RUNNING</span>
             </div>
@@ -156,7 +159,7 @@ export const BlogGenerator = ({ onBack, onGenerationComplete }) => {
               <Loader2 size={10} className="animate-spin" />
               <span>[AI] Outlining canonical drafts and tuning SEO keywords...</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600">
+            <div className="flex items-center gap-2" style={{ color: 'rgba(255, 255, 255, 0.45)' }}>
               <span>[AI] Applying length trimming and scoring search engine metrics...</span>
             </div>
           </div>
@@ -171,6 +174,17 @@ export const BlogGenerator = ({ onBack, onGenerationComplete }) => {
                 <Compass size={16} className="text-primary" />
                 <span>Select Blog Topic Context</span>
               </h3>
+
+              {initialCustomAngle && (
+                <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary space-y-1 animate-fade-in mb-2">
+                  <p className="font-bold uppercase tracking-wider text-[9px] flex items-center gap-1.5">
+                    <Sparkles size={11} className="animate-pulse" />
+                    <span>Targeted AI Content Copy Angle Active:</span>
+                  </p>
+                  <p className="font-medium text-white leading-relaxed italic">"{initialCustomAngle}"</p>
+                  <p className="text-[10px] text-slate-400 mt-1">The AI content generation pipeline will prioritize this strategic angle and title structure.</p>
+                </div>
+              )}
               
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-slate-400">Target Blog Topic *</label>

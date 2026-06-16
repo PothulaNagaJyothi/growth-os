@@ -122,7 +122,7 @@ export const Dashboard = () => {
       value: dashboardData?.metrics?.scheduledPosts ?? 0,
       change: '+0.0%',
       isPositive: true,
-      icon: <Calendar className="text-secondary" size={22} />,
+      icon: <Calendar className="text-purple-500" size={22} />,
       colorClass: 'group-hover:shadow-glow-purple transition-all duration-300'
     },
     {
