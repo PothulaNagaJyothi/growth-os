@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Heart, MessageSquare, Share2, Mail, Check, ArrowUpRight } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const SubstackPreview = ({ title, copy, imageUrl }) => {
+export const SubstackPreview = ({ title, subtitle, copy, imageUrl }) => {
   const [likes, setLikes] = useState(89);
   const [liked, setLiked] = useState(false);
   const [email, setEmail] = useState('');
@@ -46,13 +46,19 @@ export const SubstackPreview = ({ title, copy, imageUrl }) => {
           </h3>
         )}
 
+        {subtitle && (
+          <h4 className="text-xs md:text-sm font-normal text-slate-400 italic text-center mt-1">
+            {subtitle}
+          </h4>
+        )}
+
         <div className="flex flex-col items-center gap-1.5 text-[10px] text-slate-500 font-mono text-center">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-300">Veloce Team</span>
             <span>•</span>
             <span>June 11, 2026</span>
           </div>
-          <span className="text-slate-400">Grounded SaaS Insights and Scaling Metrics</span>
+          <span className="text-slate-400">{subtitle || 'Grounded SaaS Insights and Scaling Metrics'}</span>
         </div>
       </div>
 

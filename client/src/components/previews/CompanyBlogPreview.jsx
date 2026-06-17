@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ArrowUpRight, Check, Heart, MessageSquare, Share2 } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const CompanyBlogPreview = ({ title, copy, imageUrl }) => {
+export const CompanyBlogPreview = ({ title, subtitle, copy, imageUrl }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [likes, setLikes] = useState(42);
@@ -42,6 +42,11 @@ export const CompanyBlogPreview = ({ title, copy, imageUrl }) => {
             <h3 className="text-lg md:text-xl font-bold text-white leading-tight tracking-tight mt-2">
               {title}
             </h3>
+          )}
+          {subtitle && (
+            <p className="text-xs text-slate-300 font-medium leading-relaxed mt-1">
+              {subtitle}
+            </p>
           )}
         </div>
       </div>

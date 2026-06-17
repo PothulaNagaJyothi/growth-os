@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Bookmark, Share2, MessageSquare } from 'lucide-react';
 import { renderMarkdownToHTML } from '../../utils/markdown';
 
-export const MediumPreview = ({ title, copy, imageUrl }) => {
+export const MediumPreview = ({ title, subtitle, copy, imageUrl }) => {
   const [claps, setClaps] = useState(438);
   const [clapped, setClapped] = useState(false);
   const [animating, setAnimating] = useState(false);
@@ -43,6 +43,12 @@ export const MediumPreview = ({ title, copy, imageUrl }) => {
           <h3 className="text-xl md:text-2xl font-extrabold text-white leading-tight font-serif tracking-tight">
             {title}
           </h3>
+        )}
+        
+        {subtitle && (
+          <h4 className="text-xs md:text-sm font-normal text-slate-400 leading-normal font-serif mt-1">
+            {subtitle}
+          </h4>
         )}
         
         {imageUrl && (

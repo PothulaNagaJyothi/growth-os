@@ -128,6 +128,54 @@ const cleanPlatformCopy = (copy, title) => {
   return cleaned;
 };
 
+const extractSubtitle = (copy) => {
+  if (!copy) return { subtitle: '', cleanCopy: '' };
+  let cleaned = copy.trim();
+  let lines = cleaned.split(/\r?\n/);
+  let subtitle = '';
+  let found = false;
+  
+  for (let i = 0; i < 6; i++) {
+    if (lines.length <= i) break;
+    const currentLine = lines[i].trim();
+    if (currentLine === '') continue;
+    
+    const isSubtitleHeader = /^##\s*Subtitle\s*$/i.test(currentLine);
+    const isSubtitleInline = /^(?:##\s*Subtitle:?|\*\*Subtitle:?|\*Subtitle:?|Subtitle:)\s+(.*)/i.test(currentLine);
+    
+    if (isSubtitleInline) {
+      const match = currentLine.match(/^(?:##\s*Subtitle:?|\*\*Subtitle:?|\*Subtitle:?|Subtitle:)\s+(.*)/i);
+      subtitle = match[1].trim();
+      lines.splice(i, 1);
+      found = true;
+      break;
+    }
+    
+    if (isSubtitleHeader) {
+      let nextIdx = i + 1;
+      while (nextIdx < lines.length && lines[nextIdx].trim() === '') {
+        nextIdx++;
+      }
+      if (nextIdx < lines.length) {
+        subtitle = lines[nextIdx].trim();
+        lines.splice(nextIdx, 1);
+      }
+      lines.splice(i, 1);
+      found = true;
+      break;
+    }
+  }
+  
+  while (lines.length > 0 && lines[0].trim() === '') {
+    lines.shift();
+  }
+  
+  return {
+    subtitle,
+    cleanCopy: lines.join('\n').trim()
+  };
+};
+
 export const BlogPreview = ({ blogId, onBack }) => {
   const queryClient = useQueryClient();
   const { tasks, startTask, clearTask } = useTasks();
@@ -447,9 +495,14 @@ export const BlogPreview = ({ blogId, onBack }) => {
         htmlText = htmlPart;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
-        const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
+        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
         plainText = `# ${titleText}\n\n`;
         htmlText = `<h1>${titleText}</h1>\n`;
+        if (subtitle) {
+          plainText += `${subtitle}\n\n`;
+          htmlText += `<h2>${subtitle}</h2>\n`;
+        }
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
           htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
@@ -512,8 +565,12 @@ export const BlogPreview = ({ blogId, onBack }) => {
         filename = `linkedin_${slugName}.txt`;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
-        const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
+        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
         plainText = yamlFrontMatter + `# ${titleText}\n\n`;
+        if (subtitle) {
+          plainText += `${subtitle}\n\n`;
+        }
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
         }
@@ -583,8 +640,14 @@ export const BlogPreview = ({ blogId, onBack }) => {
         bodyHtml = htmlPart;
         filename = `linkedin_${slugName}.html`;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
-        const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
-        bodyHtml = renderMarkdownToHTML(strippedCopy);
+        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
+        let htmlContent = '';
+        if (subtitle) {
+          htmlContent += `<h2>${subtitle}</h2>\n`;
+        }
+        htmlContent += renderMarkdownToHTML(strippedCopy);
+        bodyHtml = htmlContent;
         filename = `${activeTab}_${slugName}.html`;
       } else if (activeTab === 'devto') {
         const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
@@ -1184,21 +1247,29 @@ export const BlogPreview = ({ blogId, onBack }) => {
                         />
                       )}
 
-                      {activeTab === 'medium' && (
-                        <MediumPreview
-                          title={renderedRecord.title}
-                          copy={cleanPlatformCopy(renderedRecord.copy, renderedRecord.title || blogRecord.title)}
-                          imageUrl={resolvedCoverImageUrl}
-                        />
-                      )}
+                      {activeTab === 'medium' && (() => {
+                        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+                        return (
+                          <MediumPreview
+                            title={renderedRecord.title}
+                            subtitle={subtitle}
+                            copy={cleanPlatformCopy(cleanCopy, renderedRecord.title || blogRecord.title)}
+                            imageUrl={resolvedCoverImageUrl}
+                          />
+                        );
+                      })()}
 
-                      {activeTab === 'blog' && (
-                        <CompanyBlogPreview
-                          title={renderedRecord.title}
-                          copy={cleanPlatformCopy(renderedRecord.copy, renderedRecord.title || blogRecord.title)}
-                          imageUrl={resolvedCoverImageUrl}
-                        />
-                      )}
+                      {activeTab === 'blog' && (() => {
+                        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+                        return (
+                          <CompanyBlogPreview
+                            title={renderedRecord.title}
+                            subtitle={subtitle}
+                            copy={cleanPlatformCopy(cleanCopy, renderedRecord.title || blogRecord.title)}
+                            imageUrl={resolvedCoverImageUrl}
+                          />
+                        );
+                      })()}
 
                       {activeTab === 'devto' && (
                         <DevToPreview
@@ -1209,13 +1280,17 @@ export const BlogPreview = ({ blogId, onBack }) => {
                         />
                       )}
 
-                      {activeTab === 'substack' && (
-                        <SubstackPreview
-                          title={renderedRecord.title}
-                          copy={cleanPlatformCopy(renderedRecord.copy, renderedRecord.title || blogRecord.title)}
-                          imageUrl={resolvedCoverImageUrl}
-                        />
-                      )}
+                      {activeTab === 'substack' && (() => {
+                        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+                        return (
+                          <SubstackPreview
+                            title={renderedRecord.title}
+                            subtitle={subtitle}
+                            copy={cleanPlatformCopy(cleanCopy, renderedRecord.title || blogRecord.title)}
+                            imageUrl={resolvedCoverImageUrl}
+                          />
+                        );
+                      })()}
                     </>
                   )}
                 </div>
