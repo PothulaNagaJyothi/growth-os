@@ -176,6 +176,83 @@ const extractSubtitle = (copy) => {
   };
 };
 
+const convertTablesToCodeBlocks = (markdown) => {
+  if (!markdown) return '';
+  const lines = markdown.split(/\r?\n/);
+  const result = [];
+  let inTable = false;
+  let tableRows = [];
+  
+  const isRow = (line) => line.trim().startsWith('|') && line.trim().endsWith('|');
+  const isSeparator = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return false;
+    const test = trimmed.slice(1, -1).replace(/[\s-:|]/g, '');
+    return test === '' && trimmed.includes('-');
+  };
+
+  const generateCodeBlockTable = (rows) => {
+    const cleanRows = rows.filter(row => !isSeparator(row.raw));
+    const parsedRows = cleanRows.map(row => {
+      return row.raw.trim().slice(1, -1).split('|').map(c => c.trim());
+    });
+    
+    if (parsedRows.length === 0) return '';
+    const colCount = Math.max(...parsedRows.map(r => r.length));
+    const colWidths = Array(colCount).fill(0);
+    parsedRows.forEach(row => {
+      for (let i = 0; i < colCount; i++) {
+        const cellVal = row[i] || '';
+        if (cellVal.length > colWidths[i]) {
+          colWidths[i] = cellVal.length;
+        }
+      }
+    });
+    
+    const formattedLines = [];
+    parsedRows.forEach((row, rowIdx) => {
+      let formattedRow = '|';
+      for (let i = 0; i < colCount; i++) {
+        const cellVal = row[i] || '';
+        const padding = ' '.repeat(colWidths[i] - cellVal.length);
+        formattedRow += ` ${cellVal}${padding} |`;
+      }
+      formattedLines.push(formattedRow);
+      
+      if (rowIdx === 0) {
+        let separatorRow = '|';
+        for (let i = 0; i < colCount; i++) {
+          separatorRow += ` ${'-'.repeat(colWidths[i])} |`;
+        }
+        formattedLines.push(separatorRow);
+      }
+    });
+    
+    return '\n```\n' + formattedLines.join('\n') + '\n```\n';
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isRow(line)) {
+      inTable = true;
+      tableRows.push({ raw: line, index: i });
+    } else {
+      if (inTable) {
+        result.push(generateCodeBlockTable(tableRows));
+        inTable = false;
+        tableRows = [];
+      }
+      result.push(line);
+    }
+  }
+  
+  if (inTable) {
+    result.push(generateCodeBlockTable(tableRows));
+  }
+  
+  return result.join('\n');
+};
+
 export const BlogPreview = ({ blogId, onBack }) => {
   const queryClient = useQueryClient();
   const { tasks, startTask, clearTask } = useTasks();
@@ -493,7 +570,24 @@ export const BlogPreview = ({ blogId, onBack }) => {
 
         plainText = plainPart;
         htmlText = htmlPart;
-      } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
+      } else if (activeTab === 'medium') {
+        const titleText = renderedRecord.title || blogRecord.title;
+        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
+        const copyWithCodeBlockTables = convertTablesToCodeBlocks(strippedCopy);
+        plainText = `# ${titleText}\n\n`;
+        htmlText = `<h1>${titleText}</h1>\n`;
+        if (subtitle) {
+          plainText += `${subtitle}\n\n`;
+          htmlText += `<h2>${subtitle}</h2>\n`;
+        }
+        if (resolvedCoverImageUrl) {
+          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+          htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
+        }
+        plainText += copyWithCodeBlockTables;
+        htmlText += renderMarkdownToHTML(copyWithCodeBlockTables);
+      } else if (activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
         const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
@@ -563,7 +657,21 @@ export const BlogPreview = ({ blogId, onBack }) => {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
         filename = `linkedin_${slugName}.txt`;
-      } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
+      } else if (activeTab === 'medium') {
+        const titleText = renderedRecord.title || blogRecord.title;
+        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
+        const copyWithCodeBlockTables = convertTablesToCodeBlocks(strippedCopy);
+        plainText = yamlFrontMatter + `# ${titleText}\n\n`;
+        if (subtitle) {
+          plainText += `${subtitle}\n\n`;
+        }
+        if (resolvedCoverImageUrl) {
+          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
+        }
+        plainText += copyWithCodeBlockTables;
+        filename = `medium_${slugName}.md`;
+      } else if (activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
         const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
@@ -639,7 +747,18 @@ export const BlogPreview = ({ blogId, onBack }) => {
         }
         bodyHtml = htmlPart;
         filename = `linkedin_${slugName}.html`;
-      } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
+      } else if (activeTab === 'medium') {
+        const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
+        const copyWithCodeBlockTables = convertTablesToCodeBlocks(strippedCopy);
+        let htmlContent = '';
+        if (subtitle) {
+          htmlContent += `<h2>${subtitle}</h2>\n`;
+        }
+        htmlContent += renderMarkdownToHTML(copyWithCodeBlockTables);
+        bodyHtml = htmlContent;
+        filename = `medium_${slugName}.html`;
+      } else if (activeTab === 'blog' || activeTab === 'substack') {
         const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
         let htmlContent = '';
@@ -1249,11 +1368,13 @@ export const BlogPreview = ({ blogId, onBack }) => {
 
                       {activeTab === 'medium' && (() => {
                         const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
+                        const strippedCopy = cleanPlatformCopy(cleanCopy, renderedRecord.title || blogRecord.title);
+                        const copyWithCodeBlockTables = convertTablesToCodeBlocks(strippedCopy);
                         return (
                           <MediumPreview
                             title={renderedRecord.title}
                             subtitle={subtitle}
-                            copy={cleanPlatformCopy(cleanCopy, renderedRecord.title || blogRecord.title)}
+                            copy={copyWithCodeBlockTables}
                             imageUrl={resolvedCoverImageUrl}
                           />
                         );
