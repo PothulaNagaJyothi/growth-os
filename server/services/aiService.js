@@ -722,6 +722,18 @@ Generate visual outline now:`;
     const personaTone = persona?.tone || '';
     const personaDesc = persona?.description || '';
     const topic = campaign?.topic || blog.title;
+    
+    const brandColors = company?.brandColors || [];
+    const brandColorsDescription = company?.brandColorsDescription || '';
+    const brandColorsList = brandColors.length > 0 ? brandColors.join(', ') : 'Not explicitly set';
+
+    // Extract outline titles or first few lines of content for richer context if meta description is empty
+    let outlineContext = '';
+    if (blog.outline && blog.outline.length > 0) {
+      outlineContext = blog.outline.map(s => s.sectionTitle).join(', ');
+    }
+    const contentSnippet = blog.content ? blog.content.replace(/<[^>]*>/g, '').substring(0, 500) : '';
+    const blogContext = `Title: ${blog.title}\nSummary: ${blog.metaDescription || 'N/A'}\nOutline Sections: ${outlineContext || 'N/A'}\nExcerpt: ${contentSnippet || 'N/A'}`;
 
     const hasLogo = company?.logo && (company.logo.startsWith('data:image/') || company.logo.startsWith('http://') || company.logo.startsWith('https://'));
 
@@ -735,6 +747,8 @@ Company Details:
 - Industry: ${industry}
 - Product Description: ${productDesc}
 - Brand Voice: ${brandVoice}
+- Brand Color Codes: ${brandColorsList}
+- Brand Color Description: ${brandColorsDescription}
 
 Persona Details:
 - Name: ${personaName}
@@ -744,18 +758,22 @@ Persona Details:
 Platform: ${platform || 'General'}
 
 Requirements for the DALL-E prompt:
-1. Extract and incorporate visual design elements, artistic style, and a primary color palette (using specific hex codes or color descriptions) derived directly from the attached company logo image.
+1. Extract and incorporate visual design elements, artistic style, and a primary color palette (using specific hex codes or color descriptions) derived directly from the attached company logo image. You MUST prioritize the configured brand colors: ${brandColorsList} (${brandColorsDescription}) where appropriate. These brand colors MUST be the dominant colors of the image.
 2. The design style must match the target persona's preferences (e.g. professional and educational, or technical and clean).
 3. Do NOT include any text, typography, letters, logos, or words in the image. DALL-E must generate a pure background/illustration/graphic design.
 4. Output only the prompt string. Do not wrap in JSON or markdown.
-5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", specify a wide landscape (16:9 aspect ratio) composition with subjects centered.`;
+5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", specify a wide landscape (16:9 aspect ratio) composition with subjects centered.
+6. To guarantee visual diversity and prevent identical images for different blogs:
+   - Identify a unique, creative visual metaphor or conceptual scene based on the unique blog context (Title, Summary, Outline, Excerpt) instead of generic visual clichés.
+   - Specify a distinct artistic style or medium (e.g. detailed minimalist 3D render, modern flat vector, papercut layered art, line-art graphic, abstract glassmorphism shapes) suited to the specific theme.
+   - Describe a specific composition (e.g. focal object, background texture, lighting details) that directly represents this post's unique content.`;
 
       const userContent = [
         {
           type: 'text',
-          text: `Analyze the attached company logo to identify its color scheme and design characteristics, then create a highly descriptive DALL-E cover image prompt for this blog post. The prompt must explicitly specify the style and color palette to match the logo and the target persona's tone:
-TITLE: ${blog.title}
-SUMMARY: ${blog.metaDescription || 'N/A'}
+          text: `Analyze the attached company logo to identify its color scheme and design characteristics, then create a highly descriptive DALL-E cover image prompt for this blog post. The prompt must explicitly specify the style and color palette to match the logo, using the configured brand colors (${brandColorsList}), and represent the unique blog details:
+BLOG CONTEXT:
+${blogContext}
 TOPIC: ${topic}
 PLATFORM: ${platform || 'General'}`
         },
@@ -794,6 +812,8 @@ Company Details:
 - Industry: ${industry}
 - Product Description: ${productDesc}
 - Brand Voice: ${brandVoice}
+- Brand Color Codes: ${brandColorsList}
+- Brand Color Description: ${brandColorsDescription}
 
 Persona Details:
 - Name: ${personaName}
@@ -803,15 +823,19 @@ Persona Details:
 Platform: ${platform || 'General'}
 
 Requirements for the DALL-E prompt:
-1. Incorporate visual design elements and colors that match the company's industry and brand voice (e.g. if EdTech/UDEN, use professional learning, career growth, teals/blues/purples color palette).
+1. Incorporate visual design elements and colors that match the company's industry and brand voice. You MUST prioritize using the configured brand colors: ${brandColorsList} (${brandColorsDescription}) in the prompt. Make these brand colors the dominant colors of the image.
 2. The design style must match the target persona's preferences (e.g. professional and educational, or technical and clean).
 3. Do NOT include any text, typography, letters, logos, or words in the image.
 4. Output only the prompt string. Do not wrap in JSON or markdown.
-5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", specify a wide landscape (16:9 aspect ratio) composition with subjects centered.`;
+5. The composition MUST be optimized for the target platform's aspect ratio. Since the platform is "${platform}", specify a wide landscape (16:9 aspect ratio) composition with subjects centered.
+6. To guarantee visual diversity and prevent identical images for different blogs:
+   - Identify a unique, creative visual metaphor or conceptual scene based on the unique blog context (Title, Summary, Outline, Excerpt) instead of generic visual clichés.
+   - Specify a distinct artistic style or medium (e.g. detailed minimalist 3D render, modern flat vector, papercut layered art, line-art graphic, abstract glassmorphism shapes) suited to the specific theme.
+   - Describe a specific composition (e.g. focal object, background texture, lighting details) that directly represents this post's unique content.`;
 
     const userPrompt = `Create a DALL-E image prompt for a blog post:
-TITLE: ${blog.title}
-SUMMARY: ${blog.metaDescription || 'N/A'}
+BLOG CONTEXT:
+${blogContext}
 TOPIC: ${topic}
 PLATFORM: ${platform || 'General'}`;
 
@@ -823,7 +847,28 @@ PLATFORM: ${platform || 'General'}`;
       return responseText.trim();
     } catch (err) {
       console.warn('[AI SERVICE] generateBrandedImagePrompt failed, fallback to default', err.message);
-      return `Minimalist 3D isometric vector illustration depicting ${topic}, professional cyan and teal highlights, suited for ${industry}, no text.`;
+      
+      const fallbackColors = brandColors.length > 0 
+        ? `with a color palette strictly limited to the brand colors: ${brandColors.join(', ')} (${brandColorsDescription})` 
+        : 'using professional dark cyan and grey highlights';
+      
+      const styles = [
+        'Minimalist 3D isometric vector illustration',
+        'Modern flat vector graphic illustration',
+        'Clean line-art conceptual illustration',
+        'Abstract geometric digital art style',
+        'Surrealist conceptual digital painting with glassmorphism shapes',
+        'Papercut layered vector collage style art'
+      ];
+      // Deterministically pick a style based on the blog title's hash so that different blogs get different styles
+      let hash = 0;
+      const titleStr = blog?.title || topic || 'generic topic';
+      for (let i = 0; i < titleStr.length; i++) {
+        hash = titleStr.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const selectedStyle = styles[Math.abs(hash) % styles.length];
+      
+      return `${selectedStyle} depicting a creative visual metaphor for "${titleStr}", ${fallbackColors}, flat solid background, no text, no letters, no typography.`;
     }
   }
 
