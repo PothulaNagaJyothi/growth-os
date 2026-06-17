@@ -93,6 +93,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
   const [editTitle, setEditTitle] = useState('');
   const [editCopy, setEditCopy] = useState('');
   const [editHashtags, setEditHashtags] = useState([]);
+  const [editMetaDescription, setEditMetaDescription] = useState('');
 
   // Sync edit states when renderedRecord changes
   useEffect(() => {
@@ -100,10 +101,12 @@ export const BlogPreview = ({ blogId, onBack }) => {
       setEditTitle(renderedRecord.title || '');
       setEditCopy(renderedRecord.copy || '');
       setEditHashtags(renderedRecord.hashtags || []);
+      setEditMetaDescription(renderedRecord.metaDescription || '');
     } else {
       setEditTitle('');
       setEditCopy('');
       setEditHashtags([]);
+      setEditMetaDescription('');
     }
   }, [renderedRecord]);
 
@@ -932,6 +935,27 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       </span>
                     </div>
                   </div>
+
+                  {!isEditing && (
+                    <div className={`p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-left text-xs ${
+                      activeTab === 'linkedin' || activeTab === 'medium' || activeTab === 'devto' || activeTab === 'substack' ? 'max-w-2xl' : 'max-w-4xl'
+                    } mx-auto space-y-2`}>
+                      {renderedRecord.metaDescription && (
+                        <p className="text-slate-400 font-mono leading-relaxed">
+                          <strong className="text-slate-300 font-semibold uppercase text-[9px] block mb-0.5">Meta Description:</strong>
+                          {renderedRecord.metaDescription}
+                        </p>
+                      )}
+                      {renderedRecord.hashtags && renderedRecord.hashtags.length > 0 && (
+                        <p className="text-slate-400 font-mono leading-relaxed">
+                          <strong className="text-slate-300 font-semibold uppercase text-[9px] block mb-0.5">Hashtags:</strong>
+                          <span className="text-primary font-semibold">
+                            {renderedRecord.hashtags.map(tag => `#${tag}`).join(' ')}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  )}
                   
                   {isEditing ? (
                     <div className={`glass-card rounded-3xl border border-white/5 p-6 md:p-8 w-full ${
@@ -979,6 +1003,16 @@ export const BlogPreview = ({ blogId, onBack }) => {
                         </div>
                       )}
 
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400">Meta Description</label>
+                        <textarea
+                          rows={2}
+                          value={editMetaDescription}
+                          onChange={(e) => setEditMetaDescription(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-xs font-semibold focus:outline-none focus:border-primary transition-colors resize-none"
+                        />
+                      </div>
+
                       <div className="pt-4 flex justify-end gap-2 border-t border-white/5 mt-2">
                         <button
                           onClick={() => setIsEditing(false)}
@@ -992,6 +1026,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                               title: editTitle,
                               copy: editCopy,
                               hashtags: editHashtags,
+                              metaDescription: editMetaDescription,
                             });
                           }}
                           disabled={updateRenderMutation.isPending}
