@@ -763,18 +763,206 @@ export const BlogPreview = ({ blogId, onBack }) => {
         filename = `${activeTab}_${slugName}.html`;
       } else if (activeTab === 'devto') {
         const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
-        let copyWithTags = cleanCopyWithoutTrailingHashtags(strippedCopy);
-        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
-          copyWithTags += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
-        }
-        bodyHtml = renderMarkdownToHTML(copyWithTags);
+        bodyHtml = renderMarkdownToHTML(cleanCopyWithoutTrailingHashtags(strippedCopy));
         filename = `devto_${slugName}.html`;
       }
     }
 
     if (!bodyHtml) return;
 
-    const htmlContent = `<!DOCTYPE html>
+    let htmlContent = "";
+
+    if (activeTab === 'devto') {
+      const hashtagsList = renderedRecord?.hashtags && renderedRecord.hashtags.length > 0
+        ? renderedRecord.hashtags
+        : ['devops', 'kubernetes', 'tutorial'];
+
+      htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${titleText}</title>
+  <style>
+    body {
+      background-color: #0F141C;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.62;
+      color: #d1d5db;
+      max-width: 680px;
+      margin: 40px auto;
+      padding: 0 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .dev-card {
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background-color: rgba(15, 20, 28, 0.95);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      margin-top: 20px;
+    }
+    .dev-content {
+      padding: 32px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-top: 10px;
+      margin-bottom: 0.5rem;
+      line-height: 1.25;
+      color: #ffffff;
+    }
+    h2, h3, h4, h5, h6 {
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    h2 { font-size: 1.6rem; }
+    h3 { font-size: 1.3rem; }
+    p {
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 1.05rem;
+      color: #d1d5db;
+    }
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      padding-left: 2rem;
+      font-size: 1.05rem;
+    }
+    pre {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.25rem;
+      overflow-x: auto;
+    }
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #f25b18;
+    }
+    a {
+      color: #f25b18;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #d1460f;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    .cover-container {
+      width: 100%;
+      background-color: #0B0F17;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      text-align: center;
+    }
+    .cover-img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .author-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #ffffff;
+      font-size: 0.75rem;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .author-info {
+      font-size: 0.75rem;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .author-name {
+      font-weight: bold;
+      color: #e2e8f0;
+    }
+    .author-meta {
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      margin-bottom: 24px;
+    }
+    .tag {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      padding: 2px 8px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: monospace;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid #334155;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    th {
+      background: #1e293b;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  </style>
+</head>
+<body>
+  <div class="dev-card">
+    ${resolvedCoverImageUrl ? `<div class="cover-container"><img class="cover-img" src="${resolvedCoverImageUrl}" alt="Cover Image" /></div>` : ''}
+    <div class="dev-content">
+      <div class="author-bar">
+        <div class="avatar">VO</div>
+        <div class="author-info">
+          <div><span class="author-name">Veloce Operations</span> <span style="color:#64748b; margin:0 4px;">•</span> <span style="color:#64748b;">June 11 (2026)</span></div>
+          <div class="author-meta">Sourced via Growth OS Content Pipeline</div>
+        </div>
+      </div>
+      
+      <h1>${titleText}</h1>
+      
+      <div class="tags">
+        ${hashtagsList.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+      </div>
+      
+      ${bodyHtml}
+    </div>
+  </div>
+</body>
+</html>`;
+    } else {
+      htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -867,6 +1055,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
   ${bodyHtml}
 </body>
 </html>`;
+    }
 
     try {
       const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
