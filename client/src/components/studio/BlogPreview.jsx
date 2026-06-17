@@ -360,12 +360,31 @@ export const BlogPreview = ({ blogId, onBack }) => {
       if (activeTab === 'linkedin') {
         const titleText = renderedRecord.title || blogRecord.title;
         const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
-        if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
-        if (resolvedCoverImageUrl) plainText += `[Image Attachment: ${resolvedCoverImageUrl}]\n\n`;
-        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
-        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
-          plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
+        
+        let plainPart = "";
+        let htmlPart = "";
+
+        if (renderedRecord.title) {
+          plainPart += `${renderedRecord.title}\n\n`;
+          htmlPart += `<h1>${renderedRecord.title}</h1>\n`;
         }
+        if (resolvedCoverImageUrl) {
+          plainPart += `[Image Attachment: ${resolvedCoverImageUrl}]\n\n`;
+          htmlPart += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
+        }
+
+        const cleanCopy = cleanCopyWithoutTrailingHashtags(strippedCopy);
+        plainPart += cleanCopy;
+        htmlPart += renderMarkdownToHTML(cleanCopy);
+
+        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
+          const hashtagsStr = renderedRecord.hashtags.map(t => `#${t}`).join(' ');
+          plainPart += `\n\n${hashtagsStr}`;
+          htmlPart += `<p>${hashtagsStr}</p>`;
+        }
+
+        plainText = plainPart;
+        htmlText = htmlPart;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
         const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
@@ -496,13 +515,17 @@ export const BlogPreview = ({ blogId, onBack }) => {
 
       if (activeTab === 'linkedin') {
         const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
-        let plainText = "";
-        if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
-        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
-        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
-          plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
+        let htmlPart = "";
+        if (renderedRecord.title) htmlPart += `<h1>${renderedRecord.title}</h1>\n`;
+        if (resolvedCoverImageUrl) {
+          htmlPart += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
         }
-        bodyHtml = plainText.split('\n').map(p => p.trim() ? `<p>${p}</p>` : '').join('\n');
+        const cleanCopy = cleanCopyWithoutTrailingHashtags(strippedCopy);
+        htmlPart += renderMarkdownToHTML(cleanCopy);
+        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
+          htmlPart += `<p>${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}</p>`;
+        }
+        bodyHtml = htmlPart;
         filename = `linkedin_${slugName}.html`;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
