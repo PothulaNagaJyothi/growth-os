@@ -131,8 +131,8 @@ const cleanPlatformCopy = (copy, title) => {
     const isSubtitleHeader = /^##\s*Subtitle\s*$/i.test(firstLine);
     const isSubtitleInline = /^(?:##\s*Subtitle:?|\*\*Subtitle:?|\*Subtitle:?|Subtitle:)\s+/i.test(firstLine);
     
-    // Check if line is a meta description line
-    const isMetaDesc = /^(?:\*\*Meta\s*description:\*\*|\*\*Meta\s*description\*\*|\*Meta\s*description:\*|Meta\s*description:|\*\*Meta\s*description:)/i.test(firstLine);
+    // Check if line is a meta description/excerpt/expert line
+    const isMetaDesc = /^(?:\*\*|\*|)?meta\s*(?:description|excerpt|expert)(?:\*\*|\*|)?:\s*/i.test(firstLine);
     
     if (isRepeatedTitle || isGenericH1 || isSubtitleInline || isMetaDesc) {
       lines.shift();
@@ -620,10 +620,15 @@ export const BlogPreview = ({ blogId, onBack }) => {
         htmlText += renderMarkdownToHTML(copyWithCodeBlockTables);
       } else if (activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
-        const { cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const { subtitle: extractedSub, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const displaySubtitle = renderedRecord.metaDescription || extractedSub;
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
         plainText = `# ${titleText}\n\n`;
         htmlText = `<h1>${titleText}</h1>\n`;
+        if (displaySubtitle) {
+          plainText += `${displaySubtitle}\n\n`;
+          htmlText += `<h2>${displaySubtitle}</h2>\n`;
+        }
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
           htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
@@ -707,9 +712,13 @@ export const BlogPreview = ({ blogId, onBack }) => {
         filename = `medium_${slugName}.md`;
       } else if (activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
-        const { cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const { subtitle: extractedSub, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const displaySubtitle = renderedRecord.metaDescription || extractedSub;
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
         plainText = yamlFrontMatter + `# ${titleText}\n\n`;
+        if (displaySubtitle) {
+          plainText += `${displaySubtitle}\n\n`;
+        }
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
         }
@@ -793,9 +802,10 @@ export const BlogPreview = ({ blogId, onBack }) => {
         bodyHtml = renderMarkdownToHTML(copyWithCodeBlockTables);
         filename = `medium_${slugName}.html`;
       } else if (activeTab === 'substack') {
-        const { cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const { subtitle: extractedSub, cleanCopy } = extractSubtitle(renderedRecord.copy);
+        const displaySubtitle = renderedRecord.metaDescription || extractedSub;
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
-        subtitleText = "";
+        subtitleText = displaySubtitle;
         bodyHtml = renderMarkdownToHTML(strippedCopy);
         filename = `substack_${slugName}.html`;
       } else if (activeTab === 'blog') {
