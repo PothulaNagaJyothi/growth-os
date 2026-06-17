@@ -58,7 +58,7 @@ export const SubstackPreview = ({ title, subtitle, copy, imageUrl }) => {
             <span>•</span>
             <span>June 11, 2026</span>
           </div>
-          <span className="text-slate-400">{subtitle || 'Grounded SaaS Insights and Scaling Metrics'}</span>
+          <span className="text-slate-400">Grounded SaaS Insights and Scaling Metrics</span>
         </div>
       </div>
 
