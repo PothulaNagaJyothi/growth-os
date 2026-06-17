@@ -18,40 +18,40 @@ const parseMarkdownTables = (html) => {
   };
 
   const generateHtmlTable = (header, alignments, rows) => {
-    let tableHtml = '<div class="overflow-x-auto my-6 rounded-xl border border-white/10">\n';
-    tableHtml += '  <table class="min-w-full divide-y divide-white/5 text-sm">\n';
+    let tableHtml = '<table class="min-w-full divide-y divide-white/5 text-sm my-6 border border-white/10 rounded-xl" style="width: 100%; border-collapse: collapse; margin: 24px 0; border: 1px solid #e2e8f0;">\n';
     
     // Header
-    tableHtml += '    <thead class="bg-white/5 text-slate-200">\n';
-    tableHtml += '      <tr>\n';
+    tableHtml += '  <thead class="bg-white/5 text-slate-200" style="background-color: #f8fafc;">\n';
+    tableHtml += '    <tr>\n';
     header.forEach((cell, idx) => {
       const align = alignments[idx] || 'left';
       let alignClass = 'text-left';
       if (align === 'center') alignClass = 'text-center';
       if (align === 'right') alignClass = 'text-right';
-      tableHtml += `        <th class="px-4 py-3 ${alignClass} font-semibold text-white">${cell}</th>\n`;
+      const alignStyle = `text-align: ${align || 'left'};`;
+      tableHtml += `      <th class="px-4 py-3 ${alignClass} font-semibold text-slate-700" style="${alignStyle} padding: 12px 16px; font-weight: 600; border: 1px solid #e2e8f0; color: #334155;">${cell}</th>\n`;
     });
-    tableHtml += '      </tr>\n';
-    tableHtml += '    </thead>\n';
+    tableHtml += '    </tr>\n';
+    tableHtml += '  </thead>\n';
     
     // Body
-    tableHtml += '    <tbody class="divide-y divide-white/5 text-slate-300">\n';
+    tableHtml += '  <tbody class="divide-y divide-white/5 text-slate-300">\n';
     rows.forEach(row => {
-      tableHtml += '      <tr class="hover:bg-white/[0.02] transition-colors">\n';
+      tableHtml += '    <tr class="hover:bg-white/[0.02] transition-colors">\n';
       for (let idx = 0; idx < header.length; idx++) {
         const cell = row[idx] !== undefined ? row[idx] : '';
         const align = alignments[idx] || 'left';
         let alignClass = 'text-left';
         if (align === 'center') alignClass = 'text-center';
         if (align === 'right') alignClass = 'text-right';
-        tableHtml += `        <td class="px-4 py-3 ${alignClass}">${cell}</td>\n`;
+        const alignStyle = `text-align: ${align || 'left'};`;
+        tableHtml += `      <td class="px-4 py-3 ${alignClass}" style="${alignStyle} padding: 12px 16px; border: 1px solid #e2e8f0;">${cell}</td>\n`;
       }
-      tableHtml += '      </tr>\n';
+      tableHtml += '    </tr>\n';
     });
-    tableHtml += '    </tbody>\n';
+    tableHtml += '  </tbody>\n';
     
-    tableHtml += '  </table>\n';
-    tableHtml += '</div>';
+    tableHtml += '</table>';
     return tableHtml;
   };
 
