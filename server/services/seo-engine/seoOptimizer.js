@@ -289,7 +289,7 @@ You will analyze the current title hook, body copy, hashtags, and the failed che
 You MUST optimize:
 1. Title Hook: Start with a highly engaging emoji (e.g. 🚀, 💡, 📈) followed by a curiosity-inducing, scroll-stopping headline hook.
 2. Word Count: Ensure the body copy is between 200 and 500 words to maintain high engagement and fit mobile viewport guidelines.
-3. Hashtags: Include between 3 and 5 relevant, tactical hashtags at the very bottom (e.g., #B2B #Marketing).
+3. Hashtags: Do NOT include hashtags inside the 'copy' body text itself. Instead, return the 3-5 relevant tactical hashtags EXCLUSIVELY in the 'hashtags' JSON array.
 4. CTA Engagement: Conclude with a clear engagement CTA asking readers to comment, share, or answer a specific question.
 5. Readability: Format with short, punchy paragraphs (1-2 sentences max per paragraph) and bullet points to improve scannability.
 
@@ -298,7 +298,7 @@ You MUST respond strictly in a valid JSON object format matching the exact struc
 Required JSON Structure:
 {
   "title": "Scroll-stopping title hook with emoji",
-  "copy": "Optimized, highly engaging body copy formatted in short paragraphs",
+  "copy": "Optimized, highly engaging body copy formatted in short paragraphs. CRITICAL: Do NOT include any hashtags in this copy field.",
   "hashtags": ["tag1", "tag2", "tag3"],
   "metaDescription": "Optional brief meta description",
   "improvements": [

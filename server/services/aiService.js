@@ -612,7 +612,7 @@ You MUST respond strictly in a valid JSON object format matching the exact struc
 
 Required JSON Structure:
 {
-  "copy": "Optimized platform specific copy in Markdown format (fully formatted for posts)",
+  "copy": "Optimized platform specific copy in Markdown format (fully formatted for posts). CRITICAL: Do NOT include hashtags inside the 'copy' string itself. The 'copy' field must contain ONLY the body copy text. The hashtags must be returned EXCLUSIVELY inside the 'hashtags' JSON array.",
   "hashtags": ["tag1", "tag2"],
   "headline": "A customized catchphrase or sub-hook tailored to this specific channel"
 }`;
