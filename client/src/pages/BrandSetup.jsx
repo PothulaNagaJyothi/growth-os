@@ -20,7 +20,7 @@ export const BrandSetup = () => {
     { id: 'profile', label: 'Company Profile', icon: <Building2 size={16} />, component: <Settings /> },
     { id: 'personas', label: 'Audience Personas', icon: <Users2 size={16} />, component: <Personas /> },
     { id: 'knowledge', label: 'Knowledge Base', icon: <FileArchive size={16} />, component: <KnowledgeBase /> },
-    { id: 'telemetry', label: 'Telemetry & Costs', icon: <Sparkles size={16} />, component: <TelemetryDashboard /> }
+    //{ id: 'telemetry', label: 'Telemetry & Costs', icon: <Sparkles size={16} />, component: <TelemetryDashboard /> }
   ];
 
   const currentTab = tabs.find(t => t.id === activeTab);
