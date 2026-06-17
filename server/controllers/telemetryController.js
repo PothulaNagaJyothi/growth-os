@@ -19,7 +19,6 @@ exports.getTelemetryStats = async (req, res, next) => {
           totalPromptTokens: { $sum: '$promptTokens' },
           totalCompletionTokens: { $sum: '$completionTokens' },
           totalTokens: { $sum: '$totalTokens' },
-          totalCost: { $sum: '$estimatedCost' },
           count: { $sum: 1 }
         }
       }
@@ -29,7 +28,6 @@ exports.getTelemetryStats = async (req, res, next) => {
       totalPromptTokens: 0,
       totalCompletionTokens: 0,
       totalTokens: 0,
-      totalCost: 0,
       count: 0
     };
 
@@ -42,11 +40,10 @@ exports.getTelemetryStats = async (req, res, next) => {
           count: { $sum: 1 },
           promptTokens: { $sum: '$promptTokens' },
           completionTokens: { $sum: '$completionTokens' },
-          totalTokens: { $sum: '$totalTokens' },
-          cost: { $sum: '$estimatedCost' }
+          totalTokens: { $sum: '$totalTokens' }
         }
       },
-      { $sort: { cost: -1 } }
+      { $sort: { totalTokens: -1 } }
     ]);
 
     // Retrieve last 20 raw telemetry logs

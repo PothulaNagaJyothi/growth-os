@@ -2,7 +2,6 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { 
-  Coins, 
   Cpu, 
   Activity, 
   Layers, 
@@ -10,8 +9,7 @@ import {
   Loader2, 
   RefreshCw,
   Clock,
-  Sparkles,
-  ArrowUpRight
+  Sparkles
 } from 'lucide-react';
 
 const PROCESS_NAMES = {
@@ -40,12 +38,6 @@ const PROCESS_COLORS = {
   logo_analysis: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
   content_healing: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
   keyword_suggestion: 'text-slate-400 bg-slate-500/10 border-slate-500/20'
-};
-
-const formatCost = (val) => {
-  if (val === undefined || val === null) return '$0.0000';
-  if (val === 0) return '$0.0000';
-  return `$${val.toFixed(4)}`;
 };
 
 const formatTokens = (val) => {
@@ -84,7 +76,7 @@ export const TelemetryDashboard = () => {
     return (
       <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center min-h-[400px] gap-3">
         <Loader2 className="animate-spin text-primary" size={32} />
-        <p className="text-sm font-semibold tracking-wider text-slate-400">Loading Telemetry & Costs...</p>
+        <p className="text-sm font-semibold tracking-wider text-slate-400">Loading Telemetry Logs...</p>
       </div>
     );
   }
@@ -114,9 +106,9 @@ export const TelemetryDashboard = () => {
       {/* Tab Panel Header with Refresh Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-bold text-white">API Cost & Telemetry Tracking</h3>
+          <h3 className="text-lg font-bold text-white">API Usage & Telemetry Tracking</h3>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time breakdown of LLM tokens, DALL-E image generations, and estimated costs associated with your brand's operations.
+            Real-time breakdown of LLM tokens and operations associated with your brand's AI generations.
           </p>
         </div>
         <button
@@ -130,23 +122,7 @@ export const TelemetryDashboard = () => {
       </div>
 
       {/* Aggregate summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Total Cost */}
-        <div className="glass-card rounded-2xl p-5 border border-emerald-500/10 bg-emerald-950/5 relative overflow-hidden group hover:border-emerald-500/25 transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Total Estimated Cost</p>
-              <h3 className="text-2xl font-extrabold text-emerald-300 tracking-tight">
-                {formatCost(summary.totalCost)}
-              </h3>
-            </div>
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Coins size={16} />
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-3">Azure OpenAI & DALL-E 3 pricing</p>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Tokens */}
         <div className="glass-card rounded-2xl p-5 border border-blue-500/10 bg-blue-950/5 relative overflow-hidden group hover:border-blue-500/25 transition-all duration-300">
           <div className="flex justify-between items-start">
@@ -220,24 +196,23 @@ export const TelemetryDashboard = () => {
           <div className="px-5 py-4 border-b border-white/5">
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               <Sparkles size={14} className="text-primary animate-pulse" />
-              <span>Process Cost Breakdown</span>
+              <span>Process Token Breakdown</span>
             </h4>
-            <p className="text-[10px] text-slate-400 mt-1">Aggregated cost and tokens by feature area</p>
+            <p className="text-[10px] text-slate-400 mt-1">Aggregated tokens by feature area</p>
           </div>
 
           <div className="p-4 flex-1 space-y-3 max-h-[420px] overflow-y-auto scrollbar-thin">
             {breakdown.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-slate-500 text-xs">
-                <span>No breakdown data recorded yet.</span>
+                <span>No telemetry logs recorded yet.</span>
               </div>
             ) : (
               breakdown.map((item) => {
                 const processName = PROCESS_NAMES[item._id] || item._id;
-                const totalCostVal = item.cost || 0;
                 const totalTokensVal = item.totalTokens || 0;
                 
-                // Estimate a percentage based on total cost for a small visualization bar
-                const costPercent = summary.totalCost > 0 ? (totalCostVal / summary.totalCost) * 100 : 0;
+                // Estimate a percentage based on total tokens for a small visualization bar
+                const tokensPercent = summary.totalTokens > 0 ? (totalTokensVal / summary.totalTokens) * 100 : 0;
                 
                 return (
                   <div key={item._id} className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-2 hover:bg-white/10 transition-colors">
@@ -245,19 +220,19 @@ export const TelemetryDashboard = () => {
                       <span className={`text-[10px] px-2 py-0.5 rounded border font-semibold ${PROCESS_COLORS[item._id] || 'text-slate-400 bg-slate-500/10 border-white/5'}`}>
                         {processName}
                       </span>
-                      <span className="text-xs font-bold text-white">{formatCost(totalCostVal)}</span>
+                      <span className="text-xs font-bold text-white">{formatTokens(totalTokensVal)} Tokens</span>
                     </div>
 
                     <div className="flex justify-between text-[10px] text-slate-400">
                       <span>{item.count} Call{item.count > 1 ? 's' : ''}</span>
-                      <span>{formatTokens(totalTokensVal)} Tokens</span>
+                      <span>{Math.round(tokensPercent)}% share</span>
                     </div>
 
-                    {/* Cost representation bar */}
+                    {/* Token representation bar */}
                     <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-primary rounded-full transition-all duration-500" 
-                        style={{ width: `${Math.min(100, Math.max(2, costPercent))}%` }}
+                        style={{ width: `${Math.min(100, Math.max(2, tokensPercent))}%` }}
                       />
                     </div>
                   </div>
@@ -294,7 +269,6 @@ export const TelemetryDashboard = () => {
                     <th className="px-4 py-2.5">Process</th>
                     <th className="px-4 py-2.5">Model</th>
                     <th className="px-4 py-2.5 text-center">Tokens (P/C)</th>
-                    <th className="px-4 py-2.5 text-right">Cost</th>
                     <th className="px-4 py-2.5 text-right">Time</th>
                   </tr>
                 </thead>
@@ -322,9 +296,6 @@ export const TelemetryDashboard = () => {
                           ) : (
                             <span className="text-slate-500">-</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-right text-emerald-400 font-bold font-mono whitespace-nowrap">
-                          {formatCost(log.estimatedCost)}
                         </td>
                         <td className="px-4 py-3 text-right text-slate-400 text-[10px] whitespace-nowrap">
                           {formatRelativeTime(log.createdAt)}

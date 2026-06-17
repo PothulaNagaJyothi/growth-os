@@ -40,10 +40,6 @@ const TelemetrySchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    estimatedCost: {
-      type: Number,
-      default: 0,
-    },
   },
   {
     timestamps: true,

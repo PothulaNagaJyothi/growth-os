@@ -72,24 +72,13 @@ class AIService {
           // Native DB Telemetry Tracking
           if (options.companyId) {
             try {
-              let cost = 0;
-              const lowerModel = deploymentName ? deploymentName.toLowerCase() : '';
-              if (lowerModel.includes('gpt-4o') || lowerModel.includes('gpt-5') || lowerModel.includes('gpt-image-2')) {
-                cost = (usage.prompt_tokens * 0.000005) + (usage.completion_tokens * 0.000015);
-              } else if (lowerModel.includes('gpt-4')) {
-                cost = (usage.prompt_tokens * 0.00003) + (usage.completion_tokens * 0.00006);
-              } else {
-                cost = (usage.prompt_tokens * 0.0000015) + (usage.completion_tokens * 0.000002);
-              }
-
               await Telemetry.create({
                 companyId: options.companyId,
                 processType: options.processType || 'canonical_generation',
                 modelName: deploymentName || 'unknown',
                 promptTokens: usage.prompt_tokens,
                 completionTokens: usage.completion_tokens,
-                totalTokens: usage.total_tokens,
-                estimatedCost: parseFloat(cost.toFixed(6))
+                totalTokens: usage.total_tokens
               });
               console.log('[TELEMETRY] Logged token usage stats to database.');
             } catch (telemetryErr) {
@@ -961,10 +950,9 @@ PLATFORM: ${platform || 'General'}`;
               modelName: 'dall-e-3',
               promptTokens: 0,
               completionTokens: 0,
-              totalTokens: 0,
-              estimatedCost: 0.040000
+              totalTokens: 0
             });
-            console.log('[TELEMETRY] Logged DALL-E image generation cost to database.');
+            console.log('[TELEMETRY] Logged DALL-E image generation to database.');
           } catch (telemetryErr) {
             console.warn('[TELEMETRY WARNING] Failed to save image telemetry record:', telemetryErr.message);
           }
