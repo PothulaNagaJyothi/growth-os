@@ -720,6 +720,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
 
   const handleDownloadHTML = () => {
     let titleText = "";
+    let subtitleText = "";
     let bodyHtml = "";
     let filename = "";
 
@@ -751,22 +752,14 @@ export const BlogPreview = ({ blogId, onBack }) => {
         const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
         const copyWithCodeBlockTables = convertTablesToCodeBlocks(strippedCopy);
-        let htmlContent = '';
-        if (subtitle) {
-          htmlContent += `<h2>${subtitle}</h2>\n`;
-        }
-        htmlContent += renderMarkdownToHTML(copyWithCodeBlockTables);
-        bodyHtml = htmlContent;
+        subtitleText = subtitle;
+        bodyHtml = renderMarkdownToHTML(copyWithCodeBlockTables);
         filename = `medium_${slugName}.html`;
       } else if (activeTab === 'blog' || activeTab === 'substack') {
         const { subtitle, cleanCopy } = extractSubtitle(renderedRecord.copy);
         const strippedCopy = cleanPlatformCopy(cleanCopy, titleText);
-        let htmlContent = '';
-        if (subtitle) {
-          htmlContent += `<h2>${subtitle}</h2>\n`;
-        }
-        htmlContent += renderMarkdownToHTML(strippedCopy);
-        bodyHtml = htmlContent;
+        subtitleText = subtitle;
+        bodyHtml = renderMarkdownToHTML(strippedCopy);
         filename = `${activeTab}_${slugName}.html`;
       } else if (activeTab === 'devto') {
         const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
@@ -872,6 +865,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
 </head>
 <body>
   <h1>${titleText}</h1>
+  ${subtitleText ? `<h2 style="font-size: 1.4rem; font-weight: 400; color: #6b7280; margin-top: 4px; margin-bottom: 20px; font-family: Georgia, Cambria, 'Times New Roman', Times, serif; line-height: 1.4;">${subtitleText}</h2>` : ''}
   <div style="font-size: 0.9rem; color: #6b7280; margin-bottom: 24px; font-weight: 500; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;">
     By <strong>${author}</strong> &bull; Category: <strong>${category}</strong> &bull; Date: <strong>${date}</strong>
   </div>
