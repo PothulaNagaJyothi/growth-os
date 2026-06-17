@@ -35,7 +35,10 @@ const resolvedPlatformNames = {
 
 const cleanCopyWithoutTrailingHashtags = (text) => {
   if (!text) return '';
-  return text.replace(/(?:\s*\#[a-zA-Z0-9_\u00C0-\u00FF\u0100-\u017F]+)+\s*$/g, '').trim();
+  let cleaned = text.trim();
+  const trailingMetaTagsRegex = /(?:\r?\n)+(?:\*\*|)?(?:tags|hashtags)(?:\*\*|)?:\s*.*$/i;
+  cleaned = cleaned.replace(trailingMetaTagsRegex, '').trim();
+  return cleaned.replace(/(?:\s*\#[a-zA-Z0-9_\u00C0-\u00FF\u0100-\u017F]+)+\s*$/g, '').trim();
 };
 
 const stripLeadingTitle = (markdown, title) => {
