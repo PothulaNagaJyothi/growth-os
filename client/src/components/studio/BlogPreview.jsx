@@ -687,14 +687,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
       } else if (activeTab === 'devto') {
         const titleText = renderedRecord.title || blogRecord.title;
         const strippedCopy = cleanPlatformCopy(renderedRecord.copy, titleText);
-        plainText = yamlFrontMatter + `# ${titleText}\n\n`;
-        if (resolvedCoverImageUrl) {
-          plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
-        }
-        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
-        if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
-          plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
-        }
+        plainText = cleanCopyWithoutTrailingHashtags(strippedCopy);
         filename = `devto_${slugName}.md`;
       }
     }
