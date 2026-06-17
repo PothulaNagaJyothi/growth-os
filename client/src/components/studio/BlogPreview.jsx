@@ -790,19 +790,8 @@ export const BlogPreview = ({ blogId, onBack }) => {
       color: #d1d5db;
       max-width: 680px;
       margin: 40px auto;
-      padding: 0 20px;
-      -webkit-font-smoothing: antialiased;
-    }
-    .dev-card {
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      background-color: rgba(15, 20, 28, 0.95);
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-      margin-top: 20px;
-    }
-    .dev-content {
       padding: 32px;
+      -webkit-font-smoothing: antialiased;
     }
     h1 {
       font-size: 2.2rem;
@@ -858,65 +847,6 @@ export const BlogPreview = ({ blogId, onBack }) => {
       height: auto;
       border-radius: 8px;
     }
-    .cover-container {
-      width: 100%;
-      background-color: #0B0F17;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      text-align: center;
-    }
-    .cover-img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .author-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #ffffff;
-      font-size: 0.75rem;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    .author-info {
-      font-size: 0.75rem;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    .author-name {
-      font-weight: bold;
-      color: #e2e8f0;
-    }
-    .author-meta {
-      color: #64748b;
-      margin-top: 2px;
-    }
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-      margin-bottom: 24px;
-    }
-    .tag {
-      font-size: 0.7rem;
-      color: #94a3b8;
-      padding: 2px 8px;
-      background-color: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      font-family: monospace;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -939,26 +869,23 @@ export const BlogPreview = ({ blogId, onBack }) => {
   </style>
 </head>
 <body>
-  <div class="dev-card">
-    ${resolvedCoverImageUrl ? `<div class="cover-container"><img class="cover-img" src="${resolvedCoverImageUrl}" alt="Cover Image" /></div>` : ''}
-    <div class="dev-content">
-      <div class="author-bar">
-        <div class="avatar">VO</div>
-        <div class="author-info">
-          <div><span class="author-name">Veloce Operations</span> <span style="color:#64748b; margin:0 4px;">•</span> <span style="color:#64748b;">June 11 (2026)</span></div>
-          <div class="author-meta">Sourced via Growth OS Content Pipeline</div>
-        </div>
-      </div>
-      
-      <h1>${titleText}</h1>
-      
-      <div class="tags">
-        ${hashtagsList.map(tag => `<span class="tag">#${tag}</span>`).join('')}
-      </div>
-      
-      ${bodyHtml}
+  ${resolvedCoverImageUrl ? `<div style="width: 100%; background-color: #0B0F17; border-bottom: 1px solid rgba(255, 255, 255, 0.05); text-align: center; margin-bottom: 24px; border-radius: 12px; overflow: hidden;"><img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width: 100%; height: auto; display: block;" /></div>` : ''}
+  
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+    <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #1e293b; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #ffffff; font-size: 0.75rem; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">VO</div>
+    <div style="font-size: 0.75rem; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+      <div><span style="font-weight: bold; color: #e2e8f0;">Veloce Operations</span> <span style="color: #64748b; margin: 0 4px;">•</span> <span style="color: #64748b;">June 11 (2026)</span></div>
+      <div style="color: #64748b; margin-top: 2px;">Sourced via Growth OS Content Pipeline</div>
     </div>
   </div>
+  
+  <h1>${titleText}</h1>
+  
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; margin-bottom: 24px;">
+    ${hashtagsList.map(tag => `<span style="font-size: 0.7rem; color: #94a3b8; padding: 2px 8px; background-color: rgba(255, 255, 255, 0.05); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); font-family: monospace;">#${tag}</span>`).join('')}
+  </div>
+  
+  ${bodyHtml}
 </body>
 </html>`;
     } else {
