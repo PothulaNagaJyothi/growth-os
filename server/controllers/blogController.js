@@ -95,7 +95,8 @@ exports.generateBlog = async (req, res, next) => {
         research,
         knowledgeContext,
         seoBrief,
-        customAngle
+        customAngle,
+        req.user.companyId
       );
     } else {
       // Direct keyword-driven generation flow
@@ -108,7 +109,8 @@ exports.generateBlog = async (req, res, next) => {
         targetAudience,
         tone,
         knowledgeContext,
-        seoBrief
+        seoBrief,
+        req.user.companyId
       );
     }
 

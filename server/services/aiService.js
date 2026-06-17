@@ -1,6 +1,7 @@
 const axios = require('axios');
 const contentValidator = require('./content-engine/contentValidator');
 const seoAnalyzer = require('./seo-engine/seoAnalyzer');
+const Telemetry = require('../models/Telemetry');
 
 class AIService {
   constructor() {
@@ -67,6 +68,34 @@ class AIService {
           console.log(` -> Completion Tokens: ${usage.completion_tokens}`);
           console.log(` -> Total Tokens: ${usage.total_tokens}`);
           console.log('=========================================\n');
+
+          // Native DB Telemetry Tracking
+          if (options.companyId) {
+            try {
+              let cost = 0;
+              const lowerModel = deploymentName ? deploymentName.toLowerCase() : '';
+              if (lowerModel.includes('gpt-4o') || lowerModel.includes('gpt-5') || lowerModel.includes('gpt-image-2')) {
+                cost = (usage.prompt_tokens * 0.000005) + (usage.completion_tokens * 0.000015);
+              } else if (lowerModel.includes('gpt-4')) {
+                cost = (usage.prompt_tokens * 0.00003) + (usage.completion_tokens * 0.00006);
+              } else {
+                cost = (usage.prompt_tokens * 0.0000015) + (usage.completion_tokens * 0.000002);
+              }
+
+              await Telemetry.create({
+                companyId: options.companyId,
+                processType: options.processType || 'canonical_generation',
+                modelName: deploymentName || 'unknown',
+                promptTokens: usage.prompt_tokens,
+                completionTokens: usage.completion_tokens,
+                totalTokens: usage.total_tokens,
+                estimatedCost: parseFloat(cost.toFixed(6))
+              });
+              console.log('[TELEMETRY] Logged token usage stats to database.');
+            } catch (telemetryErr) {
+              console.warn('[TELEMETRY WARNING] Failed to save telemetry record:', telemetryErr.message);
+            }
+          }
         }
 
         return response.data.choices[0].message.content;
@@ -166,7 +195,7 @@ Generate JSON payload now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.7, max_tokens: 2500 });
+      ], { temperature: 0.7, max_tokens: 2500, companyId: company?._id, processType: 'market_research' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
@@ -198,7 +227,7 @@ Generate JSON payload now:`;
   /**
    * Service Method 2: generateCanonicalBlog()
    */
-  async generateCanonicalBlog(campaign, persona, research, knowledgeContext, seoBrief = null, customAngle = null) {
+  async generateCanonicalBlog(campaign, persona, research, knowledgeContext, seoBrief = null, customAngle = null, companyId = null) {
     let briefInstruction = "";
     if (seoBrief) {
       briefInstruction = `
@@ -275,7 +304,7 @@ Generate JSON payload now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.7, max_tokens: 3000 });
+      ], { temperature: 0.7, max_tokens: 3000, companyId, processType: 'canonical_generation' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
@@ -380,7 +409,7 @@ By consolidating these standard pipelines into unified developer channels, you c
     }
 
     // Adjust content length dynamically (AI-driven expand/condense correction loop)
-    blogPayload.content = await this.adjustContentLength(blogPayload.content);
+    blogPayload.content = await this.adjustContentLength(blogPayload.content, companyId);
     blogPayload.wordCount = contentValidator.countWords(blogPayload.content);
 
     // Set slug if not present
@@ -414,7 +443,7 @@ By consolidating these standard pipelines into unified developer channels, you c
   /**
    * Service Method 2b: generateCanonicalBlogDirect() - keyword-driven direct generation
    */
-  async generateCanonicalBlogDirect(keyword, targetAudience, tone, knowledgeContext, seoBrief = null) {
+  async generateCanonicalBlogDirect(keyword, targetAudience, tone, knowledgeContext, seoBrief = null, companyId = null) {
     let briefInstruction = "";
     if (seoBrief) {
       briefInstruction = `
@@ -482,7 +511,7 @@ Generate JSON payload now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.7, max_tokens: 3500 });
+      ], { temperature: 0.7, max_tokens: 3500, companyId, processType: 'canonical_generation' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
@@ -568,7 +597,7 @@ To sum up, executing these ${keyword} practices guarantees long-term operational
     }
 
     // Adjust content length dynamically (AI-driven expand/condense correction loop)
-    blogPayload.content = await this.adjustContentLength(blogPayload.content);
+    blogPayload.content = await this.adjustContentLength(blogPayload.content, companyId);
     blogPayload.wordCount = contentValidator.countWords(blogPayload.content);
 
     // Set slug if not present
@@ -634,7 +663,7 @@ Render the platform copy now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.8, max_tokens: 1500 });
+      ], { temperature: 0.8, max_tokens: 1500, companyId: blog.companyId, processType: 'platform_rendering' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
@@ -690,7 +719,7 @@ Generate visual outline now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.7, max_tokens: 1500 });
+      ], { temperature: 0.7, max_tokens: 1500, companyId: blog.companyId, processType: 'image_prompt_generation' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
@@ -875,7 +904,7 @@ PLATFORM: ${platform || 'General'}`;
   /**
    * Service Method 5: generateImage() - triggers DALL-E image generation via gpt-image-2
    */
-  async generateImage(prompt, dimensions = '1024x1024') {
+  async generateImage(prompt, dimensions = '1024x1024', companyId = null) {
     const { endpoint } = this.getCredentials();
     const apiKey = process.env.AZURE_OPENAI_API_KEY || process.env.AZURE_API_KEY || process.env.AZURE_OPENAI_IMAGE_API_KEY;
 
@@ -923,10 +952,24 @@ PLATFORM: ${platform || 'General'}`;
 
       const imageUrl = response.data?.data?.[0]?.url;
       const b64Json = response.data?.data?.[0]?.b64_json;
-      if (imageUrl) {
-        return imageUrl;
-      } else if (b64Json) {
-        return `data:image/png;base64,${b64Json}`;
+      if (imageUrl || b64Json) {
+        if (companyId) {
+          try {
+            await Telemetry.create({
+              companyId,
+              processType: 'image_generation',
+              modelName: 'dall-e-3',
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+              estimatedCost: 0.040000
+            });
+            console.log('[TELEMETRY] Logged DALL-E image generation cost to database.');
+          } catch (telemetryErr) {
+            console.warn('[TELEMETRY WARNING] Failed to save image telemetry record:', telemetryErr.message);
+          }
+        }
+        return imageUrl || `data:image/png;base64,${b64Json}`;
       }
       throw new Error('No image URL or b64_json returned in DALL-E response payload.');
     } catch (err) {

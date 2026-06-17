@@ -59,7 +59,7 @@ exports.generateImage = async (req, res, next) => {
     }
 
     // 3. Dispatch image generation to DALL-E via AIService
-    const tempUrl = await aiService.generateImage(resolvedPrompt, dimensions);
+    const tempUrl = await aiService.generateImage(resolvedPrompt, dimensions, req.user.companyId);
 
     // 4. Download DALL-E temp URL to buffer and upload to permanent storage
     let permanentUrl = tempUrl;

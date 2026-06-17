@@ -83,7 +83,7 @@ exports.updateCompany = async (req, res, next) => {
     const isHttpLogo = req.body.logo && req.body.logo.startsWith('http');
     if (req.body.logo && req.body.logo !== company.logo && (isHttpLogo || isBase64Logo)) {
       try {
-        const analysis = await aiService.analyzeLogoColors(req.body.logo);
+        const analysis = await aiService.analyzeLogoColors(req.body.logo, company._id);
         if (analysis) {
           req.body.brandColors = analysis.colors || [];
           req.body.brandColorsDescription = analysis.description || '';
@@ -148,7 +148,7 @@ exports.uploadLogo = async (req, res, next) => {
         imageToAnalyze = `data:${mimeType};base64,${base64Data}`;
       }
 
-      const analysis = await aiService.analyzeLogoColors(imageToAnalyze);
+      const analysis = await aiService.analyzeLogoColors(imageToAnalyze, req.user.companyId);
       if (analysis) {
         brandColors = analysis.colors || [];
         brandColorsDescription = analysis.description || '';

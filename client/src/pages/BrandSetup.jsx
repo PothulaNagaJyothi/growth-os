@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Settings } from './Settings';
 import { Personas } from './Personas';
 import { KnowledgeBase } from './KnowledgeBase';
+import { TelemetryDashboard } from './TelemetryDashboard';
 import { Building2, Users2, FileArchive, Sparkles } from 'lucide-react';
 
 export const BrandSetup = () => {
@@ -18,7 +19,8 @@ export const BrandSetup = () => {
   const tabs = [
     { id: 'profile', label: 'Company Profile', icon: <Building2 size={16} />, component: <Settings /> },
     { id: 'personas', label: 'Audience Personas', icon: <Users2 size={16} />, component: <Personas /> },
-    { id: 'knowledge', label: 'Knowledge Base', icon: <FileArchive size={16} />, component: <KnowledgeBase /> }
+    { id: 'knowledge', label: 'Knowledge Base', icon: <FileArchive size={16} />, component: <KnowledgeBase /> },
+    { id: 'telemetry', label: 'Telemetry & Costs', icon: <Sparkles size={16} />, component: <TelemetryDashboard /> }
   ];
 
   const currentTab = tabs.find(t => t.id === activeTab);
