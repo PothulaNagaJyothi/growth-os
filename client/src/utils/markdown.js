@@ -13,7 +13,7 @@ const parseMarkdownTables = (html) => {
   const isSeparator = (line) => {
     const trimmed = line.trim();
     if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return false;
-    const test = trimmed.slice(1, -1).replace(/[\s-:]/g, '');
+    const test = trimmed.slice(1, -1).replace(/[\s-:|]/g, '');
     return test === '' && trimmed.includes('-');
   };
 

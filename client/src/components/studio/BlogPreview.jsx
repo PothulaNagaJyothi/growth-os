@@ -38,6 +38,36 @@ const cleanCopyWithoutTrailingHashtags = (text) => {
   return text.replace(/(?:\s*\#[a-zA-Z0-9_\u00C0-\u00FF\u0100-\u017F]+)+\s*$/g, '').trim();
 };
 
+const stripLeadingTitle = (markdown, title) => {
+  if (!markdown) return '';
+  let cleaned = markdown.trim();
+  
+  if (title) {
+    const escapedTitle = title.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const titleRegex = new RegExp(`^#+\\s+${escapedTitle}\\s*(\\r?\\n)+`, 'i');
+    if (titleRegex.test(cleaned)) {
+      return cleaned.replace(titleRegex, '').trim();
+    }
+    
+    const genericLeadingTitleRegex = new RegExp(`^#+\\s+${escapedTitle}\\s*$`, 'i');
+    const lines = cleaned.split(/\r?\n/);
+    if (lines.length > 0 && genericLeadingTitleRegex.test(lines[0])) {
+      return lines.slice(1).join('\n').trim();
+    }
+  }
+  
+  const genericH1Regex = /^#\s+(.*?)(?:\r?\n|$)/i;
+  const match = cleaned.match(genericH1Regex);
+  if (match) {
+    const headingText = match[1].trim();
+    if (headingText === title || (title && title.toLowerCase().includes(headingText.toLowerCase())) || (title && headingText.toLowerCase().includes(title.toLowerCase()))) {
+      return cleaned.replace(genericH1Regex, '').trim();
+    }
+  }
+  
+  return cleaned;
+};
+
 export const BlogPreview = ({ blogId, onBack }) => {
   const queryClient = useQueryClient();
   const { tasks, startTask, clearTask } = useTasks();
@@ -312,14 +342,15 @@ export const BlogPreview = ({ blogId, onBack }) => {
   const handleCopy = async () => {
     if (activeTab === 'canonical') {
       if (!blogRecord) return;
+      const strippedContent = stripLeadingTitle(blogRecord.content, blogRecord.title);
       let plainText = `# ${blogRecord.title}\n\n`;
       let htmlText = `<h1>${blogRecord.title}</h1>\n`;
       if (resolvedCoverImageUrl) {
         plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
         htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
       }
-      plainText += blogRecord.content;
-      htmlText += renderMarkdownToHTML(blogRecord.content);
+      plainText += strippedContent;
+      htmlText += renderMarkdownToHTML(strippedContent);
       await copyToClipboard(plainText, htmlText);
     } else {
       if (!renderedRecord) return;
@@ -327,31 +358,35 @@ export const BlogPreview = ({ blogId, onBack }) => {
       let htmlText = "";
 
       if (activeTab === 'linkedin') {
+        const titleText = renderedRecord.title || blogRecord.title;
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
         if (resolvedCoverImageUrl) plainText += `[Image Attachment: ${resolvedCoverImageUrl}]\n\n`;
-        plainText += cleanCopyWithoutTrailingHashtags(renderedRecord.copy);
+        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         plainText = `# ${titleText}\n\n`;
         htmlText = `<h1>${titleText}</h1>\n`;
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
           htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
         }
-        plainText += renderedRecord.copy;
-        htmlText += renderMarkdownToHTML(renderedRecord.copy);
+        plainText += strippedCopy;
+        htmlText += renderMarkdownToHTML(strippedCopy);
       } else if (activeTab === 'devto') {
         const titleText = renderedRecord.title || blogRecord.title;
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         plainText = `# ${titleText}\n\n`;
         htmlText = `<h1>${titleText}</h1>\n`;
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
           htmlText += `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />\n`;
         }
-        let copyWithTags = cleanCopyWithoutTrailingHashtags(renderedRecord.copy);
+        let copyWithTags = cleanCopyWithoutTrailingHashtags(strippedCopy);
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           copyWithTags += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
@@ -374,40 +409,45 @@ export const BlogPreview = ({ blogId, onBack }) => {
     const yamlFrontMatter = `---\ntitle: "${blogRecord.title}"\nauthor: "${author}"\ncategory: "${category}"\ndate: "${date}"\n---\n\n`;
 
     if (activeTab === 'canonical') {
+      const strippedContent = stripLeadingTitle(blogRecord.content, blogRecord.title);
       plainText = yamlFrontMatter + `# ${blogRecord.title}\n\n`;
       if (resolvedCoverImageUrl) {
         plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
       }
-      plainText += blogRecord.content;
+      plainText += strippedContent;
       filename = `${blogRecord.slug || 'canonical'}.md`;
     } else {
       if (!renderedRecord) return;
       const slugName = blogRecord?.slug || 'post';
 
       if (activeTab === 'linkedin') {
+        const titleText = renderedRecord.title || blogRecord.title;
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         plainText = `Author: ${author}\nCategory: ${category}\nDate: ${date}\n\n`;
         if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
         if (resolvedCoverImageUrl) plainText += `[Image Attachment: ${resolvedCoverImageUrl}]\n\n`;
-        plainText += cleanCopyWithoutTrailingHashtags(renderedRecord.copy);
+        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
         filename = `linkedin_${slugName}.txt`;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
         const titleText = renderedRecord.title || blogRecord.title;
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         plainText = yamlFrontMatter + `# ${titleText}\n\n`;
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
         }
-        plainText += renderedRecord.copy;
+        plainText += strippedCopy;
         filename = `${activeTab}_${slugName}.md`;
       } else if (activeTab === 'devto') {
         const titleText = renderedRecord.title || blogRecord.title;
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         plainText = yamlFrontMatter + `# ${titleText}\n\n`;
         if (resolvedCoverImageUrl) {
           plainText += `![Cover Image](${resolvedCoverImageUrl})\n\n`;
         }
-        plainText += cleanCopyWithoutTrailingHashtags(renderedRecord.copy);
+        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
@@ -445,8 +485,9 @@ export const BlogPreview = ({ blogId, onBack }) => {
     const date = blogRecord.publishDate ? new Date(blogRecord.publishDate).toLocaleDateString() : new Date().toLocaleDateString();
 
     if (activeTab === 'canonical') {
+      const strippedContent = stripLeadingTitle(blogRecord.content, blogRecord.title);
       titleText = blogRecord.title;
-      bodyHtml = renderMarkdownToHTML(blogRecord.content);
+      bodyHtml = renderMarkdownToHTML(strippedContent);
       filename = `${blogRecord.slug || 'canonical'}.html`;
     } else {
       if (!renderedRecord) return;
@@ -454,19 +495,22 @@ export const BlogPreview = ({ blogId, onBack }) => {
       titleText = renderedRecord.title || blogRecord.title;
 
       if (activeTab === 'linkedin') {
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
         let plainText = "";
         if (renderedRecord.title) plainText += `${renderedRecord.title}\n\n`;
-        plainText += cleanCopyWithoutTrailingHashtags(renderedRecord.copy);
+        plainText += cleanCopyWithoutTrailingHashtags(strippedCopy);
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           plainText += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
         bodyHtml = plainText.split('\n').map(p => p.trim() ? `<p>${p}</p>` : '').join('\n');
         filename = `linkedin_${slugName}.html`;
       } else if (activeTab === 'medium' || activeTab === 'blog' || activeTab === 'substack') {
-        bodyHtml = renderMarkdownToHTML(renderedRecord.copy);
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
+        bodyHtml = renderMarkdownToHTML(strippedCopy);
         filename = `${activeTab}_${slugName}.html`;
       } else if (activeTab === 'devto') {
-        let copyWithTags = cleanCopyWithoutTrailingHashtags(renderedRecord.copy);
+        const strippedCopy = stripLeadingTitle(renderedRecord.copy, titleText);
+        let copyWithTags = cleanCopyWithoutTrailingHashtags(strippedCopy);
         if (renderedRecord.hashtags && renderedRecord.hashtags.length > 0) {
           copyWithTags += `\n\n${renderedRecord.hashtags.map(t => `#${t}`).join(' ')}`;
         }
@@ -803,7 +847,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
               
               <div 
                 className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed max-h-[420px] overflow-y-auto pr-2 scrollbar-glass"
-                dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(blogRecord.content) }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(stripLeadingTitle(blogRecord.content, blogRecord.title)) }}
               />
             </div>
           )}
@@ -1056,7 +1100,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       {activeTab === 'linkedin' && (
                         <LinkedInPreview
                           title={renderedRecord.title}
-                          copy={cleanCopyWithoutTrailingHashtags(renderedRecord.copy)}
+                          copy={cleanCopyWithoutTrailingHashtags(stripLeadingTitle(renderedRecord.copy, renderedRecord.title || blogRecord.title))}
                           hashtags={renderedRecord.hashtags}
                           imageUrl={resolvedCoverImageUrl}
                         />
@@ -1065,7 +1109,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       {activeTab === 'medium' && (
                         <MediumPreview
                           title={renderedRecord.title}
-                          copy={renderedRecord.copy}
+                          copy={stripLeadingTitle(renderedRecord.copy, renderedRecord.title || blogRecord.title)}
                           imageUrl={resolvedCoverImageUrl}
                         />
                       )}
@@ -1073,7 +1117,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       {activeTab === 'blog' && (
                         <CompanyBlogPreview
                           title={renderedRecord.title}
-                          copy={renderedRecord.copy}
+                          copy={stripLeadingTitle(renderedRecord.copy, renderedRecord.title || blogRecord.title)}
                           imageUrl={resolvedCoverImageUrl}
                         />
                       )}
@@ -1081,7 +1125,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       {activeTab === 'devto' && (
                         <DevToPreview
                           title={renderedRecord.title}
-                          copy={cleanCopyWithoutTrailingHashtags(renderedRecord.copy)}
+                          copy={cleanCopyWithoutTrailingHashtags(stripLeadingTitle(renderedRecord.copy, renderedRecord.title || blogRecord.title))}
                           hashtags={renderedRecord.hashtags}
                           imageUrl={resolvedCoverImageUrl}
                         />
@@ -1090,7 +1134,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
                       {activeTab === 'substack' && (
                         <SubstackPreview
                           title={renderedRecord.title}
-                          copy={renderedRecord.copy}
+                          copy={stripLeadingTitle(renderedRecord.copy, renderedRecord.title || blogRecord.title)}
                           imageUrl={resolvedCoverImageUrl}
                         />
                       )}
