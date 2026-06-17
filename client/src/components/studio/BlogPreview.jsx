@@ -779,9 +779,6 @@ export const BlogPreview = ({ blogId, onBack }) => {
 <head>
   <meta charset="UTF-8">
   <title>${titleText}</title>
-  <meta name="author" content="${author}">
-  <meta name="category" content="${category}">
-  <meta name="date" content="${date}">
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -866,10 +863,7 @@ export const BlogPreview = ({ blogId, onBack }) => {
 <body>
   <h1>${titleText}</h1>
   ${subtitleText ? `<h2 style="font-size: 1.4rem; font-weight: 400; color: #6b7280; margin-top: 4px; margin-bottom: 20px; font-family: Georgia, Cambria, 'Times New Roman', Times, serif; line-height: 1.4;">${subtitleText}</h2>` : ''}
-  <div style="font-size: 0.9rem; color: #6b7280; margin-bottom: 24px; font-weight: 500; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px;">
-    By <strong>${author}</strong> &bull; Category: <strong>${category}</strong> &bull; Date: <strong>${date}</strong>
-  </div>
-  ${resolvedCoverImageUrl ? `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-bottom:24px; display:block;" />` : ''}
+  ${resolvedCoverImageUrl ? `<img src="${resolvedCoverImageUrl}" alt="Cover Image" style="width:100%; max-width:680px; height:auto; border-radius:12px; margin-top:16px; margin-bottom:24px; display:block;" />` : ''}
   ${bodyHtml}
 </body>
 </html>`;
