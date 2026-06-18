@@ -253,9 +253,14 @@ CRITICAL CONTENT REQUIREMENTS:
    - Practical examples illustrating key points.
    - At least one internal/relative link (e.g. [internal link text](/dashboard) or similar relative path) integrated naturally.
    - At least one external link to an authoritative source (e.g. [Google Search](https://search.google.com/search-console/about)) integrated naturally.
-    - At least one illustrative image tag in markdown format with descriptive, context-aligned alt text. The image MUST be selected from the matching topic categories in the curated list of suitable external images below. It MUST be placed contextually in between content paragraphs or sections where it makes sense, rather than randomly. Do NOT invent or include random/broken placeholder URLs.
-    
+   - At least one illustrative image tag in markdown format with descriptive, context-aligned alt text. The image MUST be selected from the matching topic categories in the curated list of suitable external images below. It MUST be placed contextually in between content paragraphs or sections where it makes sense, rather than randomly. If the blog post topic/content does not match any of these categories (e.g. technology, cloud, marketing, design, business, office, healthcare), you MUST NOT include any image tag in the content under any circumstances. NEVER invent or include random/broken placeholder URLs.
+
     Curated List of Verified External Images (Select the one most relevant to the post content):
+    * Healthcare / Medical / Lab / Health Checkup:
+      - ![Medical Lab Test](https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80)
+      - ![Doctor Consultation](https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&fit=crop&w=800&q=80)
+      - ![Stethoscope and clipboard](https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=800&q=80)
+      - ![Scientific Pipettes and Tubes](https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=800&q=80)
     * Technology / Code / Cybersecurity:
       - ![Alt Text](https://images.unsplash.com/photo-1607799279861-4dd421887fb3?auto=format&fit=crop&w=800&q=80)
       - ![Alt Text](https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80)
@@ -465,6 +470,9 @@ Your goal is to adapt a high-quality canonical blog post into highly optimized p
 Format:
 - LinkedIn: Highly structured, engaging hooks, appropriate paragraph breaks, emoji highlights, and 3-5 tactical hashtags.
 - Medium: Immersive story introduction, detailed content summaries, and call-to-actions.
+
+CRITICAL IMAGE RULE: Do NOT include any images or image tags in the tailored platform copy for social media platforms (like LinkedIn). For long-form blogging platforms (like Medium, Dev.to, Substack), you may include or preserve an image tag in the content ONLY if it is highly relevant and suitable for the title and content of the blog. If there is no suitable image, do not include any image tag in the content.
+
 You MUST respond strictly in a valid JSON object format matching the exact structure below. Do not wrap in markdown codeblocks.
 
 Required JSON Structure:

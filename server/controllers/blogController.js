@@ -377,6 +377,20 @@ exports.getBlogById = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Not authorized to access this blog' });
     }
 
+    // Auto-heal empty versions
+    if (!blog.versions || blog.versions.length === 0) {
+      blog.versions = [{
+        version: 1,
+        title: blog.title,
+        metaDescription: blog.metaDescription || '',
+        content: blog.content || '',
+        seoScore: blog.seoScore || 0,
+        createdAt: blog.createdAt || new Date(),
+      }];
+      await blog.save();
+      console.log(`[AUTO-HEAL] Seeded version 1 for blog: ${blog._id}`);
+    }
+
     res.status(200).json({
       success: true,
       data: blog,
