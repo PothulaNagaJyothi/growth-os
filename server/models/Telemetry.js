@@ -21,7 +21,9 @@ const TelemetrySchema = new mongoose.Schema(
         'platform_seo_optimization',
         'logo_analysis',
         'content_healing',
-        'keyword_suggestion'
+        'keyword_suggestion',
+        'market_research',
+        'document_summarization'
       ],
     },
     modelName: {

@@ -39,6 +39,8 @@ class AIService {
       delete requestData.max_tokens;
     }
     delete requestData.apiVersion;
+    delete requestData.companyId;
+    delete requestData.processType;
 
     let attempt = 0;
     const maxAttempts = 5;

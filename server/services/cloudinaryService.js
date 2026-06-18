@@ -29,12 +29,20 @@ if (hasCloudinary) {
 exports.uploadBuffer = (fileBuffer, fileName, options = {}) => {
   return new Promise((resolve, reject) => {
     if (hasCloudinary) {
+      // Sanitize the filename to only allow alphanumeric, underscores, and hyphens for Cloudinary public_id
+      const baseName = path.parse(fileName).name;
+      const sanitizedName = baseName
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_'); // Collapse consecutive underscores
+
+      const publicId = `${Date.now()}_${sanitizedName}`;
+
       // Stream upload directly to Cloudinary
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'growth-os-knowledge',
           resource_type: 'auto', // Auto-detect format (image or raw doc)
-          public_id: `${Date.now()}_${path.parse(fileName).name}`,
+          public_id: publicId,
           ...options,
         },
         (error, result) => {
