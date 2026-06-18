@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   FileText,
@@ -18,6 +19,7 @@ import {
 
 export const KnowledgeBase = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   // States
@@ -146,7 +148,7 @@ export const KnowledgeBase = () => {
 
   const handleViewText = (doc) => {
     setSelectedFileName(doc.fileName);
-    setSelectedText(doc.extractedText);
+    setSelectedText(doc.summaryText || doc.extractedText);
   };
 
   return (
@@ -298,10 +300,10 @@ export const KnowledgeBase = () => {
                     <button
                       onClick={() => handleViewText(doc)}
                       className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-bold"
-                      title="View Extracted Text"
+                      title="View AI Grounding Summary"
                     >
                       <Eye size={12} />
-                      <span>View Text</span>
+                      <span>View Summary</span>
                     </button>
                     <button
                       onClick={() => handleDelete(doc._id)}
@@ -326,7 +328,7 @@ export const KnowledgeBase = () => {
             {/* Modal Header */}
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-white">Extracted Document Context</h3>
+                <h3 className="text-lg font-bold text-white">AI Grounding Summary Context</h3>
                 <p className="text-[10px] text-primary truncate mt-0.5 max-w-sm sm:max-w-md">{selectedFileName}</p>
               </div>
               <button
@@ -355,6 +357,28 @@ export const KnowledgeBase = () => {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* Navigation guide to Topics & Research */}
+      {!isLoading && !isError && documentsData && documentsData.length > 0 && (
+        <div className="glass-card rounded-2xl p-6 border border-primary/20 bg-primary/5 flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 animate-fade-in">
+          <div className="space-y-1 text-center sm:text-left">
+            <h4 className="text-sm font-bold text-white flex items-center gap-1.5 justify-center sm:justify-start">
+              <Check className="text-emerald-400" size={16} />
+              <span>Knowledge Base Grounding Active</span>
+            </h4>
+            <p className="text-xs text-slate-400">
+              Your company profile has reference documents loaded. You are ready to create a campaign topic and start research.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/topics')}
+            className="px-5 py-3 bg-gradient-to-r from-primary to-accent text-background font-extrabold rounded-xl shadow-glow transition-all hover:opacity-90 flex items-center gap-2 text-xs cursor-pointer shrink-0"
+          >
+            <span>Create Topic & Rerun Research</span>
+            <span>&rarr;</span>
+          </button>
         </div>
       )}
     </div>
