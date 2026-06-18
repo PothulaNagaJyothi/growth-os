@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Sparkles, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export const Login = () => {
   const { login } = useAuth();
@@ -10,6 +10,7 @@ export const Login = () => {
   // Form Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Validation / Loading States
   const [loading, setLoading] = useState(false);
@@ -128,14 +129,21 @@ export const Login = () => {
                 <Lock size={18} />
               </span>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-4 py-3 bg-background/60 border rounded-xl text-white text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-slate-600 ${
+                className={`w-full pl-10 pr-10 py-3 bg-background/60 border rounded-xl text-white text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-slate-600 ${
                   fieldErrors.password ? 'border-red-500/50 focus:border-red-500' : 'border-white/10'
                 }`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
             {fieldErrors.password && (
               <p className="text-[11px] text-red-400 flex items-center gap-1 font-medium">
