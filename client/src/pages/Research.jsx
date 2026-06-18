@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useTasks } from '../context/TaskContext';
+import { renderMarkdownToHTML } from '../utils/markdown';
 import {
   Search,
   BookOpen,
@@ -472,28 +473,7 @@ export const Research = ({ selectedTopicId: propTopicId, setSelectedTopicId: set
                   {activeTab === 'news' && (
                     <div className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed space-y-4">
                       {researchRecord.news ? (
-                        researchRecord.news.split('\n').map((line, idx) => {
-                          const trimmed = line.trim();
-                          if (trimmed.startsWith('####')) {
-                            return <h5 key={idx} className="text-sm font-bold text-primary mt-3 mb-1">{trimmed.replace(/^#+\s*/, '')}</h5>;
-                          }
-                          if (trimmed.startsWith('###')) {
-                            return <h4 key={idx} className="text-base font-bold text-white mt-4 mb-2">{trimmed.replace(/^#+\s*/, '')}</h4>;
-                          }
-                          if (trimmed.startsWith('##')) {
-                            return <h3 key={idx} className="text-lg font-bold text-white mt-5 mb-2">{trimmed.replace(/^#+\s*/, '')}</h3>;
-                          }
-                          if (trimmed.startsWith('#')) {
-                            return <h2 key={idx} className="text-xl font-bold text-white mt-6 mb-3">{trimmed.replace(/^#+\s*/, '')}</h2>;
-                          }
-                          if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
-                            return <li key={idx} className="list-disc ml-5 mb-1.5">{trimmed.substring(1).trim()}</li>;
-                          }
-                          if (trimmed.startsWith('1.') || trimmed.startsWith('2.') || trimmed.startsWith('3.')) {
-                            return <li key={idx} className="list-decimal ml-5 mb-1.5">{trimmed.substring(2).trim()}</li>;
-                          }
-                          return trimmed ? <p key={idx} className="mb-3">{trimmed}</p> : null;
-                        })
+                        <div dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(researchRecord.news) }} />
                       ) : (
                         <p className="text-xs text-slate-500">No news summary available.</p>
                       )}
@@ -568,28 +548,7 @@ export const Research = ({ selectedTopicId: propTopicId, setSelectedTopicId: set
                   {activeTab === 'gaps' && (
                     <div className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed space-y-4">
                       {researchRecord.competitorAnalysis ? (
-                        researchRecord.competitorAnalysis.split('\n').map((line, idx) => {
-                          const trimmed = line.trim();
-                          if (trimmed.startsWith('####')) {
-                            return <h5 key={idx} className="text-sm font-bold text-accent mt-3 mb-1">{trimmed.replace(/^#+\s*/, '')}</h5>;
-                          }
-                          if (trimmed.startsWith('###')) {
-                            return <h4 key={idx} className="text-base font-bold text-white mt-4 mb-2">{trimmed.replace(/^#+\s*/, '')}</h4>;
-                          }
-                          if (trimmed.startsWith('##')) {
-                            return <h3 key={idx} className="text-lg font-bold text-white mt-5 mb-2">{trimmed.replace(/^#+\s*/, '')}</h3>;
-                          }
-                          if (trimmed.startsWith('#')) {
-                            return <h2 key={idx} className="text-xl font-bold text-white mt-6 mb-3">{trimmed.replace(/^#+\s*/, '')}</h2>;
-                          }
-                          if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
-                            return <li key={idx} className="list-disc ml-5 mb-1.5">{trimmed.substring(1).trim()}</li>;
-                          }
-                          if (trimmed.startsWith('1.') || trimmed.startsWith('2.') || trimmed.startsWith('3.')) {
-                            return <li key={idx} className="list-decimal ml-5 mb-1.5">{trimmed.substring(2).trim()}</li>;
-                          }
-                          return trimmed ? <p key={idx} className="mb-3">{trimmed}</p> : null;
-                        })
+                        <div dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(researchRecord.competitorAnalysis) }} />
                       ) : (
                         <p className="text-xs text-slate-500">No competitive gaps analysis.</p>
                       )}
