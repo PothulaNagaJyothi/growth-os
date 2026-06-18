@@ -51,8 +51,14 @@ export const BrandSetup = () => {
               }`}
             >
               {tab.icon}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-mono opacity-50">Step {idx + 1}:</span>
+              <div className="flex items-center gap-2">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider transition-colors ${
+                  isActive 
+                    ? 'bg-primary/20 text-primary border border-primary/30' 
+                    : 'bg-slate-200/50 text-slate-500 border border-slate-300/30'
+                }`}>
+                  Step {idx + 1}
+                </span>
                 <span>{tab.label}</span>
                 {tab.id === 'knowledge' && (
                   <span className="ml-1 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-bold uppercase tracking-wider">Required</span>

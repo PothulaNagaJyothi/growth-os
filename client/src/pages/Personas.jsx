@@ -310,89 +310,92 @@ export const Personas = ({ onNext }) => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {personasData.map((persona) => {
-                // Get initials for profile badge
-                const initials = persona.personaName
-                  ? persona.personaName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-                  : 'P';
-                  
-                return (
-                  <div 
-                    key={persona._id} 
-                    onClick={() => setViewPersonaDetails(persona)}
-                    className="glass-card rounded-2xl border border-white/5 bg-[#0B0F1C]/90 hover:border-white/10 hover:shadow-glow-sm transition-all duration-300 flex flex-col p-6 space-y-4 justify-between relative overflow-hidden group cursor-pointer"
-                  >
-                    <div className="space-y-4">
-                      {/* Top Profile Initials & Title */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/10 via-primary/20 to-accent/20 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm shadow-glow-sm select-none group-hover:scale-105 transition-transform">
-                          {initials}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {personasData.map((persona) => {
+                  // Get initials for profile badge
+                  const initials = persona.personaName
+                    ? persona.personaName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                    : 'P';
+                    
+                  return (
+                    <div 
+                      key={persona._id} 
+                      onClick={() => setViewPersonaDetails(persona)}
+                      className="glass-card rounded-2xl border border-white/5 bg-[#0B0F1C]/90 hover:border-white/10 hover:shadow-glow-sm transition-all duration-300 flex flex-col p-6 space-y-4 justify-between relative overflow-hidden group cursor-pointer"
+                    >
+                      <div className="space-y-4">
+                        {/* Top Profile Initials & Title */}
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/10 via-primary/20 to-accent/20 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm shadow-glow-sm select-none group-hover:scale-105 transition-transform">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-base font-bold text-white truncate leading-tight">
+                              {persona.personaName}
+                            </h3>
+                            <p className="text-[10px] text-accent font-medium mt-0.5 tracking-wider uppercase truncate">
+                              {persona.audienceType || 'General Audience'}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-base font-bold text-white truncate leading-tight">
-                            {persona.personaName}
-                          </h3>
-                          <p className="text-[10px] text-accent font-medium mt-0.5 tracking-wider uppercase truncate">
-                            {persona.audienceType || 'General Audience'}
-                          </p>
+
+                        {/* Attributes Section */}
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                          <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-0.5">
+                            <span className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Voice & Tone</span>
+                            <p className="text-xs text-primary font-medium truncate">{persona.tone}</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-0.5">
+                            <span className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Writing Style</span>
+                            <p className="text-xs text-slate-300 font-medium truncate">{persona.writingStyle || '—'}</p>
+                          </div>
                         </div>
+
+                        {/* Bio Description */}
+                        {persona.description && (
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Description</span>
+                            <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
+                              {persona.description}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Attributes Section */}
-                      <div className="grid grid-cols-2 gap-3 pt-2">
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-0.5">
-                          <span className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Voice & Tone</span>
-                          <p className="text-xs text-primary font-medium truncate">{persona.tone}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-0.5">
-                          <span className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Writing Style</span>
-                          <p className="text-xs text-slate-300 font-medium truncate">{persona.writingStyle || '—'}</p>
-                        </div>
+                      {/* Footer Action buttons */}
+                      <div className="pt-4 border-t border-white/5 flex items-center justify-end mt-auto gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openEditModal(persona)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 transition-all duration-200 rounded-xl font-bold text-xs cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
+                          style={{ color: undefined }}
+                          title="Edit Persona"
+                        >
+                          <Edit2 size={13} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(persona._id)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 hover:border-red-500/30 transition-all duration-200 rounded-xl font-bold text-xs cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
+                          style={{ color: undefined }}
+                          title="Delete Persona"
+                        >
+                          <Trash2 size={13} />
+                          <span>Delete</span>
+                        </button>
                       </div>
-
-                      {/* Bio Description */}
-                      {persona.description && (
-                        <div className="space-y-1">
-                          <span className="text-[9px] text-slate-500 uppercase tracking-wider font-semibold">Description</span>
-                          <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
-                            {persona.description}
-                          </p>
-                        </div>
-                      )}
                     </div>
+                  );
+                })}
+              </div>
 
-                    {/* Footer Action buttons */}
-                    <div className="pt-4 border-t border-white/5 flex items-center justify-end mt-auto gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openEditModal(persona)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white border border-primary/20 transition-all duration-200 rounded-xl font-bold text-xs cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
-                        style={{ color: undefined }}
-                        title="Edit Persona"
-                      >
-                        <Edit2 size={13} />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(persona._id)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 hover:border-red-500/30 transition-all duration-200 rounded-xl font-bold text-xs cursor-pointer active:scale-[0.97] hover:scale-[1.02]"
-                        style={{ color: undefined }}
-                        title="Delete Persona"
-                      >
-                        <Trash2 size={13} />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
               {/* Proceed button if onNext is supplied */}
               {onNext && (
-                <div className="flex justify-end pt-6">
+                <div className="flex justify-end pt-6 border-t border-slate-200/20 mt-6">
                   <button
                     type="button"
                     onClick={onNext}
-                    className="px-6 py-3 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-accent hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all font-bold text-background rounded-xl shadow-glow text-sm cursor-pointer"
                   >
                     <span>Proceed to Knowledge Base</span>
                     <span>&rarr;</span>

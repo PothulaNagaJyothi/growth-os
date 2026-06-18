@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { renderMarkdownToHTML } from '../utils/markdown';
 import {
   FileText,
   UploadCloud,
@@ -340,10 +341,15 @@ export const KnowledgeBase = () => {
             </div>
 
             {/* Modal Scrollable Text Content */}
-            <div className="flex-1 overflow-y-auto p-6 bg-background/40">
-              <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed bg-black/40 border border-white/5 p-4 rounded-xl select-text max-h-[50vh]">
-                {selectedText || 'No text content parsed in this reference document.'}
-              </pre>
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 border-y border-slate-200/50 max-h-[50vh] select-text">
+              {selectedText ? (
+                <div 
+                  className="text-xs md:text-sm text-slate-700 leading-relaxed space-y-4"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(selectedText) }}
+                />
+              ) : (
+                <p className="text-xs text-slate-400 font-mono">No text content parsed in this reference document.</p>
+              )}
             </div>
 
             {/* Modal Footer */}
