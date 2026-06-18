@@ -68,38 +68,38 @@ export const DashboardLayout = ({ children }) => {
     {
       step: 1,
       title: 'Brand Engine Setup',
-      desc: 'First, define your Company Profile, Audience Personas, and Knowledge Base context. AI copywriting matches this profile.',
+      desc: 'Define your Company Profile, Audience Personas, and Knowledge Base context to ground all AI copywriting.',
       path: '/brand',
       btnText: 'Setup Brand Context',
       tabState: { activeTab: 'profile' }
     },
     {
       step: 2,
-      title: 'Generate New Blog',
-      desc: 'Define a topic name, target audience, and choose platforms directly inside the blog generation form.',
-      path: '/blogs',
-      btnText: 'Go to Blogs Studio'
+      title: 'Define Topic Context',
+      desc: 'Create or select a campaign topic, target audience, and publication channels in the blog generator.',
+      path: '/blogs?view=generate',
+      btnText: 'Open Blog Generator'
     },
     {
       step: 3,
-      title: 'Synthesize Market Research',
-      desc: 'Run AI research to audit competitor content gaps and pull search volume intent during the blog generation process.',
-      path: '/blogs',
-      btnText: 'Run Market Research'
+      title: 'Agentic SEO Research',
+      desc: 'Trigger AI Market Research during generator configuration to extract SEO keywords and suggested hook angles.',
+      path: '/blogs?view=generate',
+      btnText: 'Start Research'
     },
     {
       step: 4,
-      title: 'Optimize & Refine',
-      desc: 'Open the post editor to review automated SEO scorecard recommendations and polish the copy.',
+      title: 'SEO Editor Tuning',
+      desc: 'Review automated keyword checks and scorecard recommendations in the editor to optimize the copy draft.',
       path: '/blogs',
       btnText: 'Go to Blogs Studio'
     },
     {
       step: 5,
       title: 'Schedule & Publish',
-      desc: 'Publish or schedule your blog posts in the Content Planner to manage your release pipeline.',
+      desc: 'Organize your publication queue and schedule posts across platforms using the Content Planner calendar.',
       path: '/calendar',
-      btnText: 'Open Planner Calendar'
+      btnText: 'Open Content Planner'
     }
   ];
 
