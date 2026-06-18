@@ -150,7 +150,7 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
           className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all font-bold text-background rounded-xl shadow-glow text-xs"
         >
           <Plus size={16} />
-          <span>Generate Aligned Blog</span>
+          <span>Generate New Blog</span>
         </button>
       </div>
 
@@ -204,8 +204,7 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
               return (
                 <div
                   key={blog._id}
-                  onClick={() => onOpenEditor(blog._id)}
-                  className={`relative group p-5 bg-surface border-t border-b border-r border-border/40 border-l-4 ${statusColors[statusLabel] || statusColors.Draft} hover:border-border/80 rounded-2xl flex flex-col justify-between gap-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-glow cursor-pointer shadow-sm`}
+                  className={`relative group p-5 bg-surface border-t border-b border-r border-border/40 border-l-4 ${statusColors[statusLabel] || statusColors.Draft} hover:border-border/80 rounded-2xl flex flex-col justify-between gap-5 transition-all duration-300 shadow-sm`}
                 >
                   <div className="space-y-3">
                     {/* Status & Date */}
@@ -226,7 +225,7 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
                           {topicName}
                         </span>
                       )}
-                      <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 min-h-[2.5rem]" title={blog.title}>
+                      <h3 className="text-sm font-bold text-foreground line-clamp-2 min-h-[2.5rem]" title={blog.title}>
                         {blog.title || 'Untitled Blog Post'}
                       </h3>
                     </div>
@@ -258,13 +257,26 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* Open Editor Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenEditor(blog._id);
+                        }}
+                        className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-background border border-primary/20 hover:border-primary rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        title="Edit blog post"
+                      >
+                        <Pencil size={12} />
+                        <span>Edit</span>
+                      </button>
+
                       {/* Open Preview Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onOpenPreview(blog._id);
                         }}
-                        className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-background border border-primary/20 hover:border-primary rounded-xl text-[10px] font-bold transition-all flex items-center gap-1"
+                        className="px-3 py-1.5 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
                         title="Open Adaptations & Simulator Previews"
                       >
                         <Eye size={12} />
@@ -278,7 +290,7 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
                             e.stopPropagation();
                             handleArchive(blog._id);
                           }}
-                          className="p-1.5 bg-red-500/10 hover:bg-red-500/25 text-red-400 hover:text-red-200 border border-red-500/20 hover:border-red-500/40 rounded-xl transition-all"
+                          className="p-1.5 bg-red-500/10 hover:bg-red-500/25 text-red-400 hover:text-red-200 border border-red-500/20 hover:border-red-500/40 rounded-xl transition-all cursor-pointer"
                           title="Archive post"
                         >
                           <Trash2 size={12} className="text-red-400" />

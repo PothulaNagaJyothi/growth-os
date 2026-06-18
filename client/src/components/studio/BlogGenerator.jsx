@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useTasks } from '../../context/TaskContext';
+import { renderMarkdownToHTML } from '../../utils/markdown';
 import {
   Compass,
   User,
@@ -13,7 +14,13 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  ArrowLeft
+  ArrowLeft,
+  Plus,
+  Eye,
+  BookOpen,
+  Search,
+  X,
+  ChevronRight
 } from 'lucide-react';
 
 export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGenerationComplete }) => {
@@ -41,8 +48,133 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
     }
   }, [selectedTopicId, initialTopicId, initialCustomAngle]);
 
+  // Fetch active content personas for selection in new topic creation
+  const { data: personasData } = useQuery({
+    queryKey: ['personas-select-gen'],
+    queryFn: async () => {
+      const response = await api.get('/personas');
+      return response.data.data || [];
+    }
+  });
+  const personas = Array.isArray(personasData) ? personasData : [];
+
+  // Topic creation sub-form state
+  const [newTopicName, setNewTopicName] = useState('');
+  const [newTopicDetail, setNewTopicDetail] = useState('');
+  const [newTopicGoal, setNewTopicGoal] = useState('');
+  const [newTopicKeywords, setNewTopicKeywords] = useState([]);
+  const [newTopicKeywordInput, setNewTopicKeywordInput] = useState('');
+  const [newTopicPersonaId, setNewTopicPersonaId] = useState('');
+  const [newTopicPlatforms, setNewTopicPlatforms] = useState(['linkedin', 'medium', 'company-blog']);
+  const [suggestingKeywords, setSuggestingKeywords] = useState(false);
+  const [topicValidationError, setTopicValidationError] = useState('');
+
+  // Research detail modal viewer state
+  const [showResearchModal, setShowResearchModal] = useState(false);
+
+  // Mutation: Create a new Topic
+  const createTopicMutation = useMutation({
+    mutationFn: async (payload) => {
+      const response = await api.post('/topics', payload);
+      return response.data.data;
+    },
+    onSuccess: (createdTopic) => {
+      if (createdTopic && createdTopic._id) {
+        queryClient.invalidateQueries({ queryKey: ['topics-select'] });
+        triggerToast('Topic created! Starting AI market research...');
+        setSelectedTopicId(createdTopic._id);
+        // Automatically trigger agentic research synthesis
+        generateResearchMutation.mutate(createdTopic._id);
+        // reset form
+        setNewTopicName('');
+        setNewTopicDetail('');
+        setNewTopicGoal('');
+        setNewTopicKeywords([]);
+        setNewTopicKeywordInput('');
+        setNewTopicPersonaId('');
+        setNewTopicPlatforms(['linkedin', 'medium', 'company-blog']);
+        setTopicValidationError('');
+      } else {
+        setTopicValidationError('Failed to select the created topic: Invalid server response.');
+      }
+    },
+    onError: (err) => {
+      setTopicValidationError(err.response?.data?.error || 'Failed to create topic.');
+    }
+  });
+
+  // Tag & platform helper methods
+  const handlePlatformChange = (platformName) => {
+    if (newTopicPlatforms.includes(platformName)) {
+      setNewTopicPlatforms(newTopicPlatforms.filter((p) => p !== platformName));
+    } else {
+      setNewTopicPlatforms([...newTopicPlatforms, platformName]);
+    }
+  };
+
+  const handleAddKeyword = (e) => {
+    e.preventDefault();
+    if (!newTopicKeywordInput.trim()) return;
+    const clean = newTopicKeywordInput.trim().toLowerCase();
+    if (newTopicKeywords.includes(clean)) {
+      setNewTopicKeywordInput('');
+      return;
+    }
+    setNewTopicKeywords([...newTopicKeywords, clean]);
+    setNewTopicKeywordInput('');
+  };
+
+  const handleRemoveKeyword = (keywordToRemove) => {
+    setNewTopicKeywords(newTopicKeywords.filter((k) => k !== keywordToRemove));
+  };
+
+  const handleSuggestKeywords = async () => {
+    if (!newTopicName.trim() || !newTopicDetail.trim()) return;
+    setSuggestingKeywords(true);
+    try {
+      const response = await api.post('/topics/suggest-keywords', {
+        topicName: newTopicName.trim(),
+        topic: newTopicDetail.trim()
+      });
+      const suggested = response.data.data || [];
+      if (suggested.length > 0) {
+        const merged = [...newTopicKeywords];
+        suggested.forEach((kw) => {
+          const clean = kw.toLowerCase().trim();
+          if (clean && !merged.includes(clean)) {
+            merged.push(clean);
+          }
+        });
+        setNewTopicKeywords(merged);
+        triggerToast('AI suggested keywords added successfully!');
+      } else {
+        triggerToast('No keywords generated.');
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast('Failed to suggest keywords.');
+    } finally {
+      setSuggestingKeywords(false);
+    }
+  };
+
+  // Mutation: Trigger market research agentic synthesis
+  const generateResearchMutation = useMutation({
+    mutationFn: async (topicId) => {
+      const response = await api.post('/research/generate', { topicId });
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['research-report-angles', selectedTopicId] });
+      triggerToast('Agentic SEO & Market Research synthesis complete!');
+    },
+    onError: (err) => {
+      triggerToast(err.response?.data?.error || 'Market research synthesis failed.');
+    }
+  });
+
   // Fetch research report for the selected topic to get suggested angles
-  const { data: researchData, isLoading: researchLoading } = useQuery({
+  const { data: researchData, isLoading: researchLoading, error: researchError } = useQuery({
     queryKey: ['research-report-angles', selectedTopicId],
     queryFn: async () => {
       const response = await api.get(`/research/${selectedTopicId}`);
@@ -53,13 +185,14 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
   });
 
   // 1. Fetch active topics
-  const { data: topics = [], isLoading: topicsLoading } = useQuery({
+  const { data: topicsData, isLoading: topicsLoading } = useQuery({
     queryKey: ['topics-select'],
     queryFn: async () => {
       const response = await api.get('/topics');
       return response.data.data || [];
     }
   });
+  const topics = Array.isArray(topicsData) ? topicsData : [];
 
   // 2. Fetch Company details
   const { data: company } = useQuery({
@@ -71,15 +204,16 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
   });
 
   // 3. Fetch Knowledge Base files
-  const { data: knowledgeFiles = [] } = useQuery({
+  const { data: knowledgeFilesData } = useQuery({
     queryKey: ['knowledge-context'],
     queryFn: async () => {
       const response = await api.get('/knowledge');
       return response.data.data || [];
     }
   });
+  const knowledgeFiles = Array.isArray(knowledgeFilesData) ? knowledgeFilesData : [];
 
-  const activeTopic = topics.find((t) => t._id === selectedTopicId);
+  const activeTopic = topics && Array.isArray(topics) ? topics.find((t) => t._id === selectedTopicId) : null;
   const taskId = selectedTopicId ? `blog_generate_${selectedTopicId}` : null;
 
   // Sync background task progress
@@ -101,6 +235,43 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
       }
     }
   }, [tasks, taskId, queryClient, clearTask, onGenerationComplete]);
+
+  const handleSaveTopic = (e) => {
+    e.preventDefault();
+    setTopicValidationError('');
+
+    if (!newTopicName.trim()) {
+      setTopicValidationError('Topic Name is required.');
+      return;
+    }
+    if (!newTopicDetail.trim()) {
+      setTopicValidationError('Topic Focus/Detail is required.');
+      return;
+    }
+    if (!newTopicPersonaId) {
+      setTopicValidationError('Target Audience Persona selection is required.');
+      return;
+    }
+    if (newTopicPlatforms.length === 0) {
+      setTopicValidationError('At least one target platform must be selected.');
+      return;
+    }
+
+    createTopicMutation.mutate({
+      topicName: newTopicName.trim(),
+      topic: newTopicDetail.trim(),
+      goal: newTopicGoal.trim(),
+      keywords: newTopicKeywords,
+      personaId: newTopicPersonaId,
+      platforms: newTopicPlatforms,
+      status: 'active'
+    });
+  };
+
+  const handleGenerateResearch = () => {
+    if (!selectedTopicId) return;
+    generateResearchMutation.mutate(selectedTopicId);
+  };
 
   const handleGenerate = () => {
     if (!selectedTopicId || !taskId) return;
@@ -218,98 +389,330 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
           {/* Main selection form */}
           <div className="lg:col-span-2 space-y-6">
             <div className="glass-card rounded-2xl p-6 border border-white/5 space-y-4">
-              <h3 className="text-sm font-bold flex items-center gap-2 border-b border-white/5 pb-3">
-                <Compass size={16} className="text-primary" />
-                <span>Select Blog Topic Context</span>
-              </h3>
-
-              {initialCustomAngle && (
-                <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary space-y-1 animate-fade-in mb-2">
-                  <p className="font-bold uppercase tracking-wider text-[9px] flex items-center gap-1.5">
-                    <Sparkles size={11} className="animate-pulse" />
-                    <span>Targeted AI Content Copy Angle Active:</span>
-                  </p>
-                  <p className="font-medium text-white leading-relaxed italic">"{initialCustomAngle}"</p>
-                  <p className="text-[10px] text-slate-400 mt-1">The AI content generation pipeline will prioritize this strategic angle and title structure.</p>
-                </div>
-              )}
-              
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400">Target Blog Topic *</label>
-                <select
-                  value={selectedTopicId}
-                  onChange={(e) => setSelectedTopicId(e.target.value)}
-                  className="w-full px-4 py-3 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer"
-                >
-                  <option value="" className="bg-background text-slate-400">-- Select an active topic --</option>
-                  {topics.map((t) => (
-                    <option key={t._id} value={t._id} className="bg-background text-white">
-                      {t.topicName}
-                    </option>
-                  ))}
-                </select>
-                {topics.length === 0 && (
-                  <p className="text-[10px] text-amber-400 pt-1 italic">
-                    No active topics discovered. Create a topic in Topics & Research first!
-                  </p>
+              <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <Compass size={16} className="text-primary" />
+                  <span>{!selectedTopicId ? 'Create Campaign Topic' : 'Topic Context & Research'}</span>
+                </h3>
+                {selectedTopicId && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTopicId('')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-xs font-bold rounded-lg transition-all text-slate-300 hover:text-white cursor-pointer"
+                  >
+                    <ArrowLeft size={12} />
+                    <span>Change Topic</span>
+                  </button>
                 )}
               </div>
 
-              {/* Suggested Copy Angle Dropdown */}
-              {selectedTopicId && (
-                <div className="space-y-4 pt-2 animate-fade-in">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-400">Suggested Copy Angle (from Market Research)</label>
-                    {researchLoading ? (
-                      <div className="flex items-center gap-2 py-2 text-xs text-slate-500">
-                        <Loader2 className="animate-spin text-primary animate-pulse" size={14} />
-                        <span>Loading suggested research angles...</span>
-                      </div>
-                    ) : researchData?.suggestedAngles && researchData.suggestedAngles.length > 0 ? (
-                      <select
-                        value={selectedAngle}
-                        onChange={(e) => setSelectedAngle(e.target.value)}
-                        className="w-full px-4 py-3 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer"
-                      >
-                        <option value="" className="bg-background text-slate-400">-- Select a suggested angle --</option>
-                        {researchData.suggestedAngles.map((angle, index) => (
-                          <option key={index} value={angle} className="bg-background text-white truncate">
-                            {angle}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="text-[10px] text-amber-400/90 italic">
-                        No suggested copy angles found. Make sure to trigger market research synthesis for this topic first.
-                      </p>
-                    )}
-                  </div>
+              {!selectedTopicId ? (
+                /* Topic Creation Form */
+                <form onSubmit={handleSaveTopic} className="space-y-4">
 
-                  {/* Copy Angle Editor */}
+                  {topicValidationError && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-xs animate-fade-in">
+                      <AlertCircle size={16} className="shrink-0 text-red-400" />
+                      <span>{topicValidationError}</span>
+                    </div>
+                  )}
+
+                  {/* Topic Name */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-400">Active Content Angle / Theme Hook</label>
-                    <textarea
-                      rows={2}
-                      value={selectedAngle}
-                      onChange={(e) => setSelectedAngle(e.target.value)}
-                      placeholder="Specify a custom strategic focus, angle, or hooks..."
-                      className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors resize-none leading-relaxed"
+                    <label className="text-xs font-semibold text-slate-400 flex items-center">
+                      Topic Name <span className="text-rose-500 font-bold ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newTopicName}
+                      onChange={(e) => setNewTopicName(e.target.value)}
+                      placeholder="e.g. Q3 Enterprise Expansion"
+                      className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary transition-colors"
                     />
-                    <p className="text-[9px] text-slate-500">
-                      The AI content generation pipeline will prioritize this strategic angle. You can select one from the dropdown or type a custom one.
-                    </p>
                   </div>
-                </div>
-              )}
 
-              {activeTopic && (
-                <div className="space-y-3 pt-3 animate-fade-in text-xs">
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
-                    <p className="font-bold text-white uppercase text-[9px] tracking-wider text-primary">Topic details:</p>
-                    <p className="text-slate-300"><span className="font-semibold text-slate-400">Topic focus:</span> {activeTopic.topic}</p>
-                    <p className="text-slate-300"><span className="font-semibold text-slate-400">Target goal:</span> {activeTopic.goal || 'General Brand growth'}</p>
-                    <p className="text-slate-300"><span className="font-semibold text-slate-400">SEO Keywords:</span> {activeTopic.keywords?.join(', ')}</p>
+                  {/* Topic Detail */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400 flex items-center">
+                      Target Core Topic Details <span className="text-rose-500 font-bold ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newTopicDetail}
+                      onChange={(e) => setNewTopicDetail(e.target.value)}
+                      placeholder="e.g. AI-driven marketing automation value propositions"
+                      className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary transition-colors"
+                    />
                   </div>
+
+                  {/* Target Audience Persona selection dropdown */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400 flex items-center">
+                      Target Audience Persona <span className="text-rose-500 font-bold ml-1">*</span>
+                    </label>
+                    <select
+                      required
+                      value={newTopicPersonaId}
+                      onChange={(e) => setNewTopicPersonaId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                    >
+                      <option value="" className="bg-background text-slate-500">-- Select Brand Persona --</option>
+                      {personas?.map(p => (
+                        <option key={p._id} value={p._id} className="bg-background text-white">
+                          {p.personaName} ({p.tone})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Targeted Platforms Grid Checklist */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-xs font-semibold text-slate-400 flex items-center">
+                      Target Multi-Channel Platforms <span className="text-rose-500 font-bold ml-1">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {['linkedin', 'medium', 'company-blog', 'dev-to', 'substack'].map((plat) => {
+                        const active = newTopicPlatforms.includes(plat);
+                        return (
+                          <button
+                            key={plat}
+                            type="button"
+                            onClick={() => handlePlatformChange(plat)}
+                            className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all capitalize text-center ${
+                              active
+                                ? 'bg-primary/10 border-primary/40 text-primary shadow-glow'
+                                : 'bg-background/40 border-white/5 text-slate-400 hover:border-white/20'
+                            }`}
+                          >
+                            {plat.replace('-', ' ')}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* SEO Keywords Tag Manager */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-semibold text-slate-400">Target SEO Keywords</label>
+                      <button
+                        type="button"
+                        onClick={handleSuggestKeywords}
+                        disabled={suggestingKeywords || !newTopicName.trim() || !newTopicDetail.trim()}
+                        className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:no-underline"
+                      >
+                        {suggestingKeywords ? (
+                          <>
+                            <Loader2 size={10} className="animate-spin" />
+                            <span>Suggesting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={10} />
+                            <span>Suggest via AI</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newTopicKeywordInput}
+                        onChange={(e) => setNewTopicKeywordInput(e.target.value)}
+                        placeholder="Add keywords (press enter)"
+                        className="flex-1 px-3 py-2 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddKeyword(e);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddKeyword}
+                        className="px-3 py-2 bg-white/5 border border-white/10 hover:border-primary hover:text-primary transition-all rounded-xl flex items-center justify-center shrink-0"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                    {/* Tags chips list */}
+                    <div className="flex flex-wrap gap-1.5 pt-1.5 max-h-[80px] overflow-y-auto pr-1">
+                      {newTopicKeywords.map(kw => (
+                        <div
+                          key={kw}
+                          className="flex items-center gap-1 pl-2 pr-1 py-0.5 bg-white/5 border border-white/10 rounded-md text-[10px] text-slate-300"
+                        >
+                          <span>#{kw}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveKeyword(kw)}
+                            className="p-0.5 hover:bg-white/10 rounded-md text-slate-400 hover:text-white"
+                          >
+                            <X size={8} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Objectives Details */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Topic Objectives & Details</label>
+                    <textarea
+                      rows={3}
+                      value={newTopicGoal}
+                      onChange={(e) => setNewTopicGoal(e.target.value)}
+                      placeholder="Describe your goals, messaging strategies..."
+                      className="w-full px-4 py-3 bg-background/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary resize-none placeholder:text-slate-600"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="submit"
+                      disabled={createTopicMutation.isPending}
+                      className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:opacity-90 disabled:opacity-50 text-background font-extrabold rounded-xl shadow-glow flex items-center gap-1.5 text-xs cursor-pointer w-full sm:w-auto justify-center"
+                    >
+                      {createTopicMutation.isPending ? (
+                        <>
+                          <Loader2 className="animate-spin" size={12} />
+                          <span>Creating Topic & Initializing...</span>
+                        </>
+                      ) : (
+                        <span>Confirm Topic & Start Research</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Topic Selector View */
+                <div className="space-y-4">
+                  {initialCustomAngle && (
+                    <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary space-y-1 animate-fade-in mb-2">
+                      <p className="font-bold uppercase tracking-wider text-[9px] flex items-center gap-1.5">
+                        <Sparkles size={11} className="animate-pulse" />
+                        <span>Targeted AI Content Copy Angle Active:</span>
+                      </p>
+                      <p className="font-medium text-white leading-relaxed italic">"{initialCustomAngle}"</p>
+                      <p className="text-[10px] text-slate-400 mt-1">The AI content generation pipeline will prioritize this strategic angle and title structure.</p>
+                    </div>
+                  )}
+
+                  {/* SEO & Market Research Generation Panel */}
+                  {selectedTopicId && (
+                    <div className="pt-2 animate-fade-in">
+                      {researchLoading ? (
+                        <div className="flex items-center justify-center p-8 bg-white/5 border border-white/5 rounded-xl gap-2 text-xs text-slate-300">
+                          <Loader2 className="animate-spin text-primary animate-pulse" size={16} />
+                          <span>Checking topic market research records...</span>
+                        </div>
+                      ) : generateResearchMutation.isPending ? (
+                        <div className="p-8 bg-white/5 border border-white/5 rounded-xl text-center space-y-4">
+                          <Loader2 className="animate-spin text-primary mx-auto animate-pulse" size={24} />
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-white">Running Agentic SEO & Market Research...</p>
+                            <p className="text-[10px] text-slate-400 leading-relaxed max-w-sm mx-auto">
+                              Our agents are auditing search volumes, extracting competitor voids, and synthesizing strategic blog copy angles...
+                            </p>
+                          </div>
+                        </div>
+                      ) : !researchData ? (
+                        <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="space-y-0.5 text-center sm:text-left">
+                            <p className="text-xs font-bold text-amber-400 flex items-center justify-center sm:justify-start gap-1">
+                              <AlertCircle size={14} />
+                              <span>No SEO Market Research Sourced</span>
+                            </p>
+                            <p className="text-[10px] text-slate-400">Run market research to identify SEO keywords, competitor voids, and angles.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleGenerateResearch}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 transition-all font-bold text-background rounded-lg flex items-center gap-1 text-xs cursor-pointer active:scale-[0.98]"
+                          >
+                            <Search size={12} />
+                            <span>Run Market Research</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                                <CheckCircle2 size={14} />
+                                <span>Agentic Market Research Active</span>
+                              </p>
+                              <p className="text-[10px] text-slate-400">
+                                Keywords: {researchData.keywords?.slice(0, 3).map(k => k.keyword).join(', ')}...
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowResearchModal(true)}
+                              className="px-3.5 py-2 border border-slate-700/50 hover:border-slate-600 bg-white/5 hover:bg-white/10 transition-all text-slate-300 hover:text-white font-bold rounded-xl flex items-center gap-1.5 text-xs cursor-pointer active:scale-[0.97]"
+                            >
+                              <Eye size={13} />
+                              <span>View Synthesized Research</span>
+                            </button>
+                          </div>
+
+                          {/* Suggested Copy Angle Dropdown */}
+                          <div className="space-y-4 pt-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-400">Suggested Copy Angle (from Market Research)</label>
+                              {researchData.suggestedAngles && researchData.suggestedAngles.length > 0 ? (
+                                <select
+                                  value={selectedAngle}
+                                  onChange={(e) => setSelectedAngle(e.target.value)}
+                                  className="w-full px-4 py-3 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                                >
+                                  <option value="" className="bg-background text-slate-400">-- Select a suggested angle --</option>
+                                  {researchData.suggestedAngles.map((angle, index) => (
+                                    <option key={index} value={angle} className="bg-background text-white truncate">
+                                      {angle}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <p className="text-[10px] text-amber-400/90 italic">
+                                  No suggested copy angles resolved in research records.
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Copy Angle Editor */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-semibold text-slate-400">Active Content Angle / Theme Hook</label>
+                              <textarea
+                                rows={2}
+                                value={selectedAngle}
+                                onChange={(e) => setSelectedAngle(e.target.value)}
+                                placeholder="Specify a custom strategic focus, angle, or hooks..."
+                                className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors resize-none leading-relaxed"
+                              />
+                              <p className="text-[9px] text-slate-500">
+                                The AI content generation pipeline will prioritize this strategic angle. You can select one from the dropdown or type a custom one.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTopic && (
+                    <div className="space-y-3 pt-3 animate-fade-in text-xs">
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                        <p className="font-bold text-white uppercase text-[9px] tracking-wider text-primary">Topic details:</p>
+                        <p className="text-slate-300"><span className="font-semibold text-slate-400">Topic focus:</span> {activeTopic.topic}</p>
+                        <p className="text-slate-300"><span className="font-semibold text-slate-400">Target goal:</span> {activeTopic.goal || 'General Brand growth'}</p>
+                        <p className="text-slate-300"><span className="font-semibold text-slate-400">SEO Keywords:</span> {activeTopic.keywords?.join(', ')}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -371,6 +774,98 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
                 <span>Generate Grounded SEO Blog</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Research Viewer Modal Overlay */}
+      {showResearchModal && researchData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in select-text">
+          <div className="w-full max-w-3xl glass-card rounded-2xl border border-white/10 shadow-2xl relative flex flex-col max-h-[85vh]">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Search size={20} className="text-primary" />
+                  <span>Synthesized Market Research Report</span>
+                </h3>
+                <p className="text-[10px] text-accent mt-0.5 font-semibold uppercase tracking-wider">
+                  Topic: {activeTopic?.topicName}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowResearchModal(false)}
+                className="p-1 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+              
+              {/* Keywords Table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Targeted Keywords Audited</h4>
+                {researchData.keywords && researchData.keywords.length > 0 ? (
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+                    <table className="min-w-full divide-y divide-slate-100 text-xs text-left">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="px-4 py-2.5 font-bold">Keyword</th>
+                          <th className="px-4 py-2.5 font-bold">Search Volume</th>
+                          <th className="px-4 py-2.5 font-bold">SEO Difficulty</th>
+                          <th className="px-4 py-2.5 font-bold">Intent</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {researchData.keywords.map((k, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-4 py-2.5 font-semibold text-primary">{k.keyword}</td>
+                            <td className="px-4 py-2.5">{k.volume}</td>
+                            <td className="px-4 py-2.5">{k.difficulty}</td>
+                            <td className="px-4 py-2.5">{k.intent}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">No keyword metrics resolved.</p>
+                )}
+              </div>
+
+              {/* Trending News Summary */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Trending News & Industry Gaps</h4>
+                <div 
+                  className="text-xs leading-relaxed text-slate-650 space-y-3 bg-white p-4 rounded-xl border border-slate-200"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(researchData.news) }}
+                />
+              </div>
+
+              {/* Competitor Analysis */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Competitor Content Gap Audits</h4>
+                <div 
+                  className="text-xs leading-relaxed text-slate-650 space-y-3 bg-white p-4 rounded-xl border border-slate-200"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(researchData.competitorAnalysis) }}
+                />
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-white/5 flex justify-end">
+              <button
+                onClick={() => setShowResearchModal(false)}
+                className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all text-background font-bold rounded-xl text-xs shadow-glow cursor-pointer"
+              >
+                Close Viewer
+              </button>
+            </div>
+
           </div>
         </div>
       )}

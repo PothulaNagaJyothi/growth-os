@@ -379,10 +379,10 @@ export const KnowledgeBase = () => {
             </p>
           </div>
           <button
-            onClick={() => navigate('/topics')}
+            onClick={() => navigate('/blogs')}
             className="px-5 py-3 bg-gradient-to-r from-primary to-accent text-background font-extrabold rounded-xl shadow-glow transition-all hover:opacity-90 flex items-center gap-2 text-xs cursor-pointer shrink-0"
           >
-            <span>Create Topic & Rerun Research</span>
+            <span>Go to Blogs Studio</span>
             <span>&rarr;</span>
           </button>
         </div>

@@ -153,10 +153,10 @@ export const Dashboard = () => {
         </div>
 
         <a 
-          href="/topics"
+          href="/blogs"
           className="shrink-0 flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all font-bold text-background rounded-xl shadow-glow self-start md:self-center cursor-pointer"
         >
-          <span>View Topics</span>
+          <span>Blogs Studio</span>
           <ArrowUpRight size={18} />
         </a>
       </div>
@@ -175,10 +175,10 @@ export const Dashboard = () => {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold">Recent Telemetry Activity</h3>
             <a 
-              href="/topics"
+              href="/blogs"
               className="text-xs text-primary font-medium cursor-pointer hover:underline flex items-center gap-1"
             >
-              View Topics <ArrowUpRight size={14} />
+              Blogs Studio <ArrowUpRight size={14} />
             </a>
           </div>
 

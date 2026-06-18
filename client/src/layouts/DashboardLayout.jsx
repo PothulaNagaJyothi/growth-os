@@ -75,31 +75,29 @@ export const DashboardLayout = ({ children }) => {
     },
     {
       step: 2,
-      title: 'Add a Blog Topic',
-      desc: 'Define a topic name, core topic details, target audience, and choose platforms.',
-      path: '/topics',
-      btnText: 'Create a Topic',
-      tabState: { openTopicModal: true }
+      title: 'Generate New Blog',
+      desc: 'Define a topic name, target audience, and choose platforms directly inside the blog generation form.',
+      path: '/blogs',
+      btnText: 'Go to Blogs Studio'
     },
     {
       step: 3,
       title: 'Synthesize Market Research',
-      desc: 'Under Market Research tab, run AI research to audit competitor content gaps and pull search volume intent.',
-      path: '/topics',
-      btnText: 'Run Market Research',
-      tabState: { activeTab: 'research' }
+      desc: 'Run AI research to audit competitor content gaps and pull search volume intent during the blog generation process.',
+      path: '/blogs',
+      btnText: 'Run Market Research'
     },
     {
       step: 4,
-      title: 'Generate Copy Draft',
-      desc: 'Select your topic in Blogs Studio, choose a copy targeted angle hook, and generate the full blog post.',
+      title: 'Optimize & Refine',
+      desc: 'Open the post editor to review automated SEO scorecard recommendations and polish the copy.',
       path: '/blogs',
       btnText: 'Go to Blogs Studio'
     },
     {
       step: 5,
-      title: 'Optimize & Schedule',
-      desc: 'Use the real-time SEO scorecard to polish the post, then publish or schedule in Content Planner.',
+      title: 'Schedule & Publish',
+      desc: 'Publish or schedule your blog posts in the Content Planner to manage your release pipeline.',
       path: '/calendar',
       btnText: 'Open Planner Calendar'
     }
@@ -129,7 +127,6 @@ export const DashboardLayout = ({ children }) => {
   const pathLabelMap = {
     dashboard: 'Dashboard',
     brand: 'Brand Setup',
-    topics: 'Topics & Research',
     blogs: 'Blogs Studio',
     calendar: 'Content Planner',
     'blog-studio': 'Blog Studio',
@@ -151,7 +148,6 @@ export const DashboardLayout = ({ children }) => {
   const menuItems = [
     { label: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
     { label: 'Brand Setup', icon: <Settings size={20} />, path: '/brand' },
-    { label: 'Topics & Research', icon: <Compass size={20} />, path: '/topics' },
     { label: 'Blogs Studio', icon: <BookOpen size={20} />, path: '/blogs' },
     { label: 'Content Planner', icon: <CalendarRange size={20} />, path: '/calendar' },
   ];

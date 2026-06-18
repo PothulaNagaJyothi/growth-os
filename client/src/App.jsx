@@ -6,7 +6,6 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { BrandSetup } from './pages/BrandSetup';
-import { TopicsHub } from './pages/TopicsHub';
 import { PlannerHub } from './pages/PlannerHub';
 import { BlogStudio } from './pages/BlogStudio';
 import { DashboardLayout } from './layouts/DashboardLayout';
@@ -109,13 +108,7 @@ export const App = () => {
 
             <Route
               path="/topics"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <TopicsHub />
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/blogs" replace />}
             />
 
             <Route

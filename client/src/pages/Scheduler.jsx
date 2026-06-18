@@ -23,7 +23,7 @@ export const Scheduler = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 5, 4)); // Default to June 2026 matching local system context (2026-06-04)
   
   // Selection and Form States
-  const [selectedTopicId, setSelectedTopicId] = useState('');
+  const [selectedBlogId, setSelectedBlogId] = useState('');
   const [selectedPlatformBlogId, setSelectedPlatformBlogId] = useState('');
   const [scheduleDateStr, setScheduleDateStr] = useState('2026-06-04');
   const [scheduleTimeStr, setScheduleTimeStr] = useState('12:00');
@@ -37,48 +37,24 @@ export const Scheduler = () => {
     setTimeout(() => setAlert({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  // 1. Fetch topics
-  const { data: topics, isLoading: topicsLoading } = useQuery({
-    queryKey: ['topics'],
+  // 1. Fetch blogs
+  const { data: blogs = [], isLoading: blogsLoading } = useQuery({
+    queryKey: ['blogs-scheduler'],
     queryFn: async () => {
-      const response = await api.get('/topics');
-      return response.data.data;
+      const response = await api.get('/blogs');
+      return response.data.data || [];
     }
   });
 
-  // Pre-select first topic
+  // Pre-select first blog
   useEffect(() => {
-    if (topics && topics.length > 0 && !selectedTopicId) {
-      setSelectedTopicId(topics[0]._id);
+    if (blogs && blogs.length > 0 && !selectedBlogId) {
+      setSelectedBlogId(blogs[0]._id);
     }
-  }, [topics, selectedTopicId]);
+  }, [blogs, selectedBlogId]);
 
-  // 2. Fetch canonical blog for selected topic
-  const { data: blogRecord, isLoading: blogLoading } = useQuery({
-    queryKey: ['blog', selectedTopicId],
-    queryFn: async () => {
-      if (!selectedTopicId) return null;
-      try {
-        const response = await api.get(`/blogs/topic/${selectedTopicId}`);
-        return response.data.data;
-      } catch (err) {
-        const is404 =
-          (err && err.response && err.response.status === 404) ||
-          (typeof err === 'string' && (
-            err.toLowerCase().includes('no canonical blog') ||
-            err.toLowerCase().includes('no blog') ||
-            err.toLowerCase().includes('not found') ||
-            err.toLowerCase().includes('404')
-          ));
-        if (is404) {
-          return null;
-        }
-        throw err;
-      }
-    },
-    enabled: !!selectedTopicId,
-    retry: false
-  });
+  const blogRecord = blogs.find((b) => b._id === selectedBlogId);
+  const blogLoading = blogsLoading;
 
   // 3. Fetch available platform adaptations for the canonical blog
   const { data: platformBlogs, isLoading: platformBlogsLoading } = useQuery({
@@ -224,7 +200,7 @@ export const Scheduler = () => {
     setScheduleDateStr(dateStr);
   };
 
-  const activeTopic = topics?.find((c) => c._id === selectedTopicId);
+  const activeTopic = null;
 
   return (
     <div className="space-y-6 relative">
@@ -369,27 +345,27 @@ export const Scheduler = () => {
 
             <form onSubmit={handleScheduleSubmit} className="space-y-4">
               
-              {/* Topic Dropdown */}
+              {/* Blog Dropdown */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-                  <Megaphone size={12} />
-                  <span>Topic Context</span>
+                  <BookOpen size={12} />
+                  <span>Select Blog Post</span>
                 </label>
                 <select
-                  value={selectedTopicId}
-                  onChange={(e) => setSelectedTopicId(e.target.value)}
+                  value={selectedBlogId}
+                  onChange={(e) => setSelectedBlogId(e.target.value)}
                   className="w-full px-3 py-2 bg-background/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer"
                 >
-                  {topicsLoading ? (
-                    <option>Loading topics...</option>
-                  ) : topics && topics.length > 0 ? (
-                    topics.map((c) => (
-                      <option key={c._id} value={c._id} className="bg-background text-white">
-                        {c.topicName}
+                  {blogsLoading ? (
+                    <option>Loading blogs...</option>
+                  ) : blogs && blogs.length > 0 ? (
+                    blogs.map((b) => (
+                      <option key={b._id} value={b._id} className="bg-background text-white">
+                        {b.title}
                       </option>
                     ))
                   ) : (
-                    <option value="">No topics available</option>
+                    <option value="">No blogs available</option>
                   )}
                 </select>
               </div>

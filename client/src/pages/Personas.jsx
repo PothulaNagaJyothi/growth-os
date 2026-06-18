@@ -61,7 +61,7 @@ export const Personas = ({ onNext }) => {
       
       const params = new URLSearchParams(location.search);
       if (params.get('redirect') === 'topics' || (location.state && location.state.redirect === 'topics')) {
-        navigate('/topics', { state: { openTopicModal: true } });
+        navigate('/blogs');
       }
     }
   });
