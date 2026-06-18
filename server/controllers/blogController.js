@@ -14,16 +14,28 @@ const contentValidator = require('../services/content-engine/contentValidator');
 // @access  Private
 exports.generateBlog = async (req, res, next) => {
   try {
+    const mongoose = require('mongoose');
     const { topicId, blogId, customAngle } = req.body;
-    if (!topicId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Topic ID is required.' 
-      });
-    }
 
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
+    }
+
+    // Check if we are overwriting/regenerating an existing blog
+    let blog = null;
+    if (blogId) {
+      blog = await Blog.findById(blogId);
+    } else if (topicId) {
+      blog = await Blog.findOne({ topicId });
+    }
+
+    // Check if we have neither topicId nor blog
+    const resolvedTopicId = topicId || (blog ? blog.topicId : null);
+    if (!resolvedTopicId && !blog) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Topic ID or Blog ID is required.' 
+      });
     }
 
     // Resolve grounding knowledge context
@@ -48,57 +60,117 @@ exports.generateBlog = async (req, res, next) => {
     let resolvedTone = '';
     let topic = null;
     let seoBrief = null;
-      // 1. Verify Topic and populate Persona
-      topic = await Topic.findById(topicId).populate('personaId');
-      if (!topic) {
-        return res.status(404).json({ success: false, error: 'Topic not found' });
-      }
+    let persona = {
+      personaName: 'General Professionals',
+      tone: 'Informative',
+      writingStyle: 'Direct',
+      audienceType: 'Content Strategists',
+    };
 
+    // 1. Verify Topic and populate Persona if Topic exists
+    if (resolvedTopicId) {
+      topic = await Topic.findById(resolvedTopicId).populate('personaId');
+    }
+
+    if (topic) {
       if (topic.companyId.toString() !== req.user.companyId.toString()) {
         return res.status(403).json({ success: false, error: 'Not authorized to build content for this topic' });
       }
-
-      const persona = topic.personaId || {
-        personaName: 'General Professionals',
-        tone: 'Informative',
-        writingStyle: 'Direct',
-        audienceType: 'Content Strategists',
-      };
-
+      persona = topic.personaId || persona;
       resolvedKeyword = topic.keywords && topic.keywords.length > 0 ? topic.keywords[0] : topic.topic;
       resolvedAudience = persona.audienceType || '';
       resolvedTone = persona.tone || '';
-
-      // Query Research Data (If missing, build dynamic contextual fallback)
-      let research = await Research.findOne({ topicId });
-      if (!research) {
-        console.log('[BLOG CONTROLLER] No active research report found in database. Building dynamic fallback context...');
-        research = {
-          news: `Recent announcements indicate significant transitions in automated ${topic.topic} services.`,
-          keywords: [
-            { keyword: `best ${topic.topic} systems`, volume: 'High', difficulty: 'Hard', intent: 'Commercial' },
-            { keyword: `how to implement ${topic.topic}`, volume: 'Medium', difficulty: 'Easy', intent: 'Informational' }
-          ],
-          competitorAnalysis: `Legacy players have a massive content void on advanced integration templates.`,
-          suggestedAngles: [
-            `Title: The Scaling Guide to ${topic.topic}`
-          ]
-        };
+    } else if (blog) {
+      // Fallback: build mock topic and persona from existing blog details
+      if (blog.companyId.toString() !== req.user.companyId.toString()) {
+        return res.status(403).json({ success: false, error: 'Not authorized to build content for this blog' });
       }
 
-      console.log(`[BLOG SERVICE] Triggering SEO Brief generation for campaign keyword: "${resolvedKeyword}"...`);
-      seoBrief = await briefGenerator.generateBrief(resolvedKeyword);
+      console.log('[BLOG CONTROLLER] Topic not found in database. Building dynamic fallback topic & persona from existing blog details...');
+      topic = {
+        _id: resolvedTopicId || new mongoose.Types.ObjectId(),
+        companyId: req.user.companyId,
+        topicName: blog.keyword || blog.title,
+        topic: blog.keyword || blog.title,
+        keywords: [blog.keyword].filter(Boolean),
+        platforms: ['html'],
+        goal: 'Generate search traffic and build authority',
+        status: 'completed'
+      };
 
-      console.log(`[BLOG SERVICE] Triggering AI Canonical Blog generation for topic: "${topic.topicName}" guided by SEO Brief...`);
-      blogPayload = await aiService.generateCanonicalBlog(
-        topic,
-        persona,
-        research,
-        knowledgeContext,
-        seoBrief,
-        customAngle,
-        req.user.companyId
-      );
+      persona = {
+        personaName: blog.targetAudience || 'General Professionals',
+        tone: blog.tone || 'Informative',
+        writingStyle: 'Direct',
+        audienceType: blog.targetAudience || 'Content Strategists'
+      };
+
+      resolvedKeyword = blog.keyword || blog.title;
+      resolvedAudience = blog.targetAudience || '';
+      resolvedTone = blog.tone || '';
+    } else {
+      // No topic and no blog found
+      return res.status(404).json({ success: false, error: 'Topic not found and no existing blog available to reconstruct details.' });
+    }
+
+    // Query Research Data (If missing, build dynamic contextual fallback)
+    let research = null;
+    if (resolvedTopicId) {
+      research = await Research.findOne({ topicId: resolvedTopicId });
+    }
+
+    if (!research) {
+      console.log('[BLOG CONTROLLER] No active research report found in database. Building dynamic fallback context...');
+      research = {
+        news: `Recent announcements indicate significant transitions in automated ${resolvedKeyword} services.`,
+        keywords: [
+          { keyword: `best ${resolvedKeyword} systems`, volume: 'High', difficulty: 'Hard', intent: 'Commercial' },
+          { keyword: `how to implement ${resolvedKeyword}`, volume: 'Medium', difficulty: 'Easy', intent: 'Informational' }
+        ],
+        competitorAnalysis: `Legacy players have a massive content void on advanced integration templates.`,
+        suggestedAngles: [
+          `Title: The Scaling Guide to ${resolvedKeyword}`
+        ]
+      };
+    }
+
+    // Generate/Fetch SEO Brief
+    console.log(`[BLOG SERVICE] Triggering SEO Brief generation for campaign keyword: "${resolvedKeyword}"...`);
+    try {
+      seoBrief = await briefGenerator.generateBrief(resolvedKeyword);
+    } catch (briefErr) {
+      console.warn('[BLOG SERVICE WARNING] SEO Brief generation failed:', briefErr.message);
+      if (blog && blog.seoBrief) {
+        console.log('[BLOG SERVICE] Using stored SEO brief from existing blog.');
+        seoBrief = blog.seoBrief;
+      } else {
+        seoBrief = {
+          primaryKeyword: resolvedKeyword,
+          secondaryKeywords: [`${resolvedKeyword} tips`, `${resolvedKeyword} guide`],
+          searchIntent: 'Informational',
+          h1Suggestion: `The Definitive Guide to ${resolvedKeyword}`,
+          h2Suggestions: [
+            `Why ${resolvedKeyword} Matters`,
+            `Key Strategies for ${resolvedKeyword}`,
+            `Implementing ${resolvedKeyword} Successfully`,
+            `Future Trends in ${resolvedKeyword}`
+          ],
+          semanticKeywords: [`${resolvedKeyword} best practices`, `${resolvedKeyword} tools`],
+          recommendedWordCount: 1000
+        };
+      }
+    }
+
+    console.log(`[BLOG SERVICE] Triggering AI Canonical Blog generation for topic: "${topic.topicName}" guided by SEO Brief...`);
+    blogPayload = await aiService.generateCanonicalBlog(
+      topic,
+      persona,
+      research,
+      knowledgeContext,
+      seoBrief,
+      customAngle,
+      req.user.companyId
+    );
 
     // Auto-generate slug
     let finalTitle = blogPayload.title;
@@ -159,15 +231,6 @@ exports.generateBlog = async (req, res, next) => {
         finalSeoScore = optResult.newScore;
         console.log(`[BLOG SERVICE] Auto-optimization completed. New SEO Score: ${finalSeoScore}`);
       }
-    }
-
-    // Check if we are overwriting/regenerating an existing blog
-    let blog = null;
-    if (blogId) {
-      blog = await Blog.findById(blogId);
-    } else if (topicId) {
-      // One-to-one mapping: overwrite existing campaign blog if it exists
-      blog = await Blog.findOne({ topicId });
     }
 
     if (blog) {
@@ -237,7 +300,7 @@ exports.generateBlog = async (req, res, next) => {
 
       blog = await Blog.create({
         companyId: req.user.companyId,
-        topicId: topicId || undefined,
+        topicId: resolvedTopicId || undefined,
         title: finalTitle,
         metaDescription: finalMeta,
         outline: blogPayload.outline,
@@ -256,8 +319,6 @@ exports.generateBlog = async (req, res, next) => {
         keywordCategory: blogPayload.category || 'General'
       });
     }
-
-
 
     res.status(201).json({
       success: true,
