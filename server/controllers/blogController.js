@@ -257,13 +257,7 @@ exports.generateBlog = async (req, res, next) => {
       });
     }
 
-    // Discard topic and research data as they are no longer needed
-    if (topicId) {
-      const Research = require('../models/Research');
-      await Topic.findByIdAndDelete(topicId);
-      await Research.deleteMany({ topicId });
-      console.log(`[BLOG SERVICE] Topic ${topicId} and associated research records discarded successfully.`);
-    }
+
 
     res.status(201).json({
       success: true,
