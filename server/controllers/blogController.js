@@ -171,6 +171,10 @@ exports.generateBlog = async (req, res, next) => {
     }
 
     if (blog) {
+      // Delete any previous cover images generated for this blog so that the regenerated blog starts with a fresh image slate
+      const ImageMetadata = require('../models/ImageMetadata');
+      await ImageMetadata.deleteMany({ blogId: blog._id });
+
       // Increment and append version history
       const nextVersion = (blog.versions && blog.versions.length > 0)
         ? Math.max(...blog.versions.map(v => v.version)) + 1
