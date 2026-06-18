@@ -255,7 +255,7 @@ CRITICAL CONTENT REQUIREMENTS:
    - At least one external link to an authoritative source (e.g. [Google Search](https://search.google.com/search-console/about)) integrated naturally.
    - At least one illustrative image tag in markdown format with descriptive alt text (e.g. ![Strategic Growth Map](https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80)).
 ${customAngle ? `CRITICAL TARGET ANGLE REQUIREMENT: You MUST write a completely distinct and unique blog post based on this specific copy angle/title hook: "${customAngle}". The H1 title, outline structure (H2/H3 headings), and body paragraphs must be fully tailored and customized to focus on this angle, ensuring it does not look like other articles on the same topic.\n` : ''}
-${briefInstruction}`;
+${briefInstruction}
 Your response MUST be a valid JSON object matching the exact structure below. Do not wrap in markdown codeblocks.
 
 Required JSON Structure:
