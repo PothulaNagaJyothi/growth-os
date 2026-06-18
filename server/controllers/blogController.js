@@ -35,7 +35,10 @@ exports.generateBlog = async (req, res, next) => {
     if (knowledgeDocs && knowledgeDocs.length > 0) {
       knowledgeContext = knowledgeDocs
         .slice(0, 3)
-        .map((doc) => `[Grounding Material: ${doc.fileName}]\n${doc.extractedText.slice(0, 1000)}...`)
+        .map((doc) => {
+          const content = doc.summaryText || (doc.extractedText ? `${doc.extractedText.slice(0, 1000)}...` : '');
+          return `[Grounding Material: ${doc.fileName}]\n${content}`;
+        })
         .join('\n\n');
     }
 

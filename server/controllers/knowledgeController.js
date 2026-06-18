@@ -1,6 +1,7 @@
 const KnowledgeBase = require('../models/KnowledgeBase');
 const cloudinaryService = require('../services/cloudinaryService');
 const textExtractor = require('../services/textExtractor');
+const aiService = require('../services/aiService');
 const logger = require('../utils/logger');
 
 // @desc    Get all company knowledge documents
@@ -49,7 +50,12 @@ exports.uploadDocument = async (req, res, next) => {
     const extractedText = await textExtractor.extractText(buffer, mimetype, originalname);
     logger.info(`Text extraction completed. Extracted length: ${extractedText.length} characters.`);
 
-    // 3. Register KnowledgeBase record in MongoDB
+    // 3. Summarize raw text using AI service to create grounding context
+    logger.info(`Starting text summarization for file: ${originalname}`);
+    const summaryText = await aiService.summarizeDocument(originalname, extractedText, req.user.companyId);
+    logger.info(`Text summarization completed. Summary length: ${summaryText.length} characters.`);
+
+    // 4. Register KnowledgeBase record in MongoDB
     const document = await KnowledgeBase.create({
       companyId: req.user.companyId,
       fileName: originalname,
@@ -57,6 +63,7 @@ exports.uploadDocument = async (req, res, next) => {
       fileUrl: uploadResult.url,
       publicId: uploadResult.public_id,
       extractedText,
+      summaryText,
     });
 
     res.status(201).json({

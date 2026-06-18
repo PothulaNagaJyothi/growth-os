@@ -985,6 +985,43 @@ Do not output any markdown code blocks, backticks, or extra text. Just raw JSON.
       };
     }
   }
+
+  /**
+   * Service Method: summarizeDocument() - generates a dense structured summary of a grounding document
+   */
+  async summarizeDocument(fileName, extractedText, companyId = null) {
+    if (!extractedText || extractedText.trim() === '') {
+      return '';
+    }
+
+    const systemPrompt = `You are an expert Information Architect and Technical Analyst at Growth OS.
+Your task is to analyze the provided raw document text and compile a highly detailed, structured, and dense factual summary.
+You MUST ensure that:
+1. NO IMPORTANT POINTS, statistics, technical names, URLs, commands, or code blocks are missed or omitted.
+2. The summary organizes information logically using bullet points, bold markers, and headers.
+3. Remove generic introductory chatter, page numbers, or formatting noise. Only keep highly dense, grounded factual context.
+4. If the document defines product descriptions, brand voice keys, user segments, or architectural rules, list them explicitly.
+Your summary must target around 400 to 700 words, capturing the full scope of the original document.`;
+
+    const userPrompt = `Document Filename: ${fileName}
+
+Raw Document Content:
+${extractedText}
+
+Generate structured factual summary now:`;
+
+    try {
+      const responseText = await this.queryAI([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ], { temperature: 0.3, max_tokens: 1500, companyId, processType: 'document_summarization' });
+
+      return responseText.trim();
+    } catch (err) {
+      console.warn(`[AI SERVICE WARNING] summarizeDocument failed for ${fileName}. Using first 1200 characters fallback...`, err.message);
+      return extractedText.slice(0, 1200);
+    }
+  }
 }
 
 module.exports = new AIService();

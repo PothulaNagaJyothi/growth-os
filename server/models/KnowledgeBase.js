@@ -29,6 +29,10 @@ const KnowledgeBaseSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    summaryText: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,
