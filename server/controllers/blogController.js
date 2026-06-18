@@ -14,11 +14,11 @@ const contentValidator = require('../services/content-engine/contentValidator');
 // @access  Private
 exports.generateBlog = async (req, res, next) => {
   try {
-    const { topicId, blogId, keyword, targetAudience, tone, customAngle } = req.body;
-    if (!topicId && (!keyword || !targetAudience || !tone)) {
+    const { topicId, blogId, customAngle } = req.body;
+    if (!topicId) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Either Topic ID or a combination of Keyword, Target Audience, and Tone is required.' 
+        error: 'Topic ID is required.' 
       });
     }
 
@@ -40,13 +40,11 @@ exports.generateBlog = async (req, res, next) => {
     }
 
     let blogPayload;
-    let resolvedKeyword = keyword || '';
-    let resolvedAudience = targetAudience || '';
-    let resolvedTone = tone || '';
+    let resolvedKeyword = '';
+    let resolvedAudience = '';
+    let resolvedTone = '';
     let topic = null;
     let seoBrief = null;
-
-    if (topicId) {
       // 1. Verify Topic and populate Persona
       topic = await Topic.findById(topicId).populate('personaId');
       if (!topic) {
@@ -98,21 +96,6 @@ exports.generateBlog = async (req, res, next) => {
         customAngle,
         req.user.companyId
       );
-    } else {
-      // Direct keyword-driven generation flow
-      console.log(`[BLOG SERVICE] Triggering SEO Brief generation for keyword: "${keyword}"...`);
-      seoBrief = await briefGenerator.generateBrief(keyword);
-
-      console.log(`[BLOG SERVICE] Triggering AI Direct Blog generation guided by SEO Brief...`);
-      blogPayload = await aiService.generateCanonicalBlogDirect(
-        keyword,
-        targetAudience,
-        tone,
-        knowledgeContext,
-        seoBrief,
-        req.user.companyId
-      );
-    }
 
     // Auto-generate slug
     let finalTitle = blogPayload.title;
