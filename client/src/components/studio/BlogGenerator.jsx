@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useTasks } from '../../context/TaskContext';
 import {
@@ -17,6 +18,7 @@ import {
 
 export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGenerationComplete }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { tasks, startTask, clearTask } = useTasks();
   const [selectedTopicId, setSelectedTopicId] = useState(initialTopicId || '');
   const [showToast, setShowToast] = useState(false);
@@ -163,6 +165,30 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
               <span>[AI] Applying length trimming and scoring search engine metrics...</span>
             </div>
           </div>
+        </div>
+      ) : knowledgeFiles.length === 0 ? (
+        /* Blocked state when no knowledge files are uploaded */
+        <div className="glass-card rounded-3xl p-12 border border-white/5 flex flex-col items-center justify-center text-center space-y-6 min-h-[400px] relative overflow-hidden bg-[#0B0F19]/90">
+          <div className="absolute inset-0 bg-gradient-to-tr from-red-500/5 to-amber-500/5 pointer-events-none" />
+          
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shadow-glow-sm">
+            <AlertCircle size={32} />
+          </div>
+
+          <div className="space-y-2 max-w-md mx-auto">
+            <h3 className="text-xl font-bold tracking-tight text-white animate-pulse">Knowledge Base Required</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              To ensure high-quality blog posts grounded in your company's actual metrics, services, and product details, you must upload at least one reference document before generating blogs.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/brand?tab=knowledge')}
+            className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-background font-extrabold rounded-xl shadow-glow transition-all hover:opacity-90 flex items-center gap-2 text-xs cursor-pointer active:scale-[0.98]"
+          >
+            <Sparkles size={14} />
+            <span>Go to Brand Setup to Upload</span>
+          </button>
         </div>
       ) : (
         /* Form configuration */

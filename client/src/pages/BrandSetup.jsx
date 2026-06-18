@@ -17,10 +17,9 @@ export const BrandSetup = () => {
   });
 
   const tabs = [
-    { id: 'profile', label: 'Company Profile', icon: <Building2 size={16} />, component: <Settings /> },
-    { id: 'personas', label: 'Audience Personas', icon: <Users2 size={16} />, component: <Personas /> },
+    { id: 'profile', label: 'Company Profile', icon: <Building2 size={16} />, component: <Settings onNext={() => setActiveTab('personas')} /> },
+    { id: 'personas', label: 'Audience Personas', icon: <Users2 size={16} />, component: <Personas onNext={() => setActiveTab('knowledge')} /> },
     { id: 'knowledge', label: 'Knowledge Base', icon: <FileArchive size={16} />, component: <KnowledgeBase /> },
-    //{ id: 'telemetry', label: 'Telemetry & Costs', icon: <Sparkles size={16} />, component: <TelemetryDashboard /> }
   ];
 
   const currentTab = tabs.find(t => t.id === activeTab);
@@ -39,7 +38,7 @@ export const BrandSetup = () => {
 
       {/* Tabs Navigation */}
       <div className="flex border-b border-white/5 gap-2 pb-px overflow-x-auto scrollbar-none">
-        {tabs.map((tab) => {
+        {tabs.map((tab, idx) => {
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -52,7 +51,13 @@ export const BrandSetup = () => {
               }`}
             >
               {tab.icon}
-              <span>{tab.label}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono opacity-50">Step {idx + 1}:</span>
+                <span>{tab.label}</span>
+                {tab.id === 'knowledge' && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-bold uppercase tracking-wider">Required</span>
+                )}
+              </div>
             </button>
           );
         })}

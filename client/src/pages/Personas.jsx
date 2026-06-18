@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 
-export const Personas = () => {
+export const Personas = ({ onNext }) => {
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
@@ -386,6 +386,19 @@ export const Personas = () => {
                   </div>
                 );
               })}
+              {/* Proceed button if onNext is supplied */}
+              {onNext && (
+                <div className="flex justify-end pt-6">
+                  <button
+                    type="button"
+                    onClick={onNext}
+                    className="px-6 py-3 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+                  >
+                    <span>Proceed to Knowledge Base</span>
+                    <span>&rarr;</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

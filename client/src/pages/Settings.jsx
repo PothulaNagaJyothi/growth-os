@@ -16,7 +16,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
-export const Settings = () => {
+export const Settings = ({ onNext }) => {
   const queryClient = useQueryClient();
 
   // Local Form states
@@ -521,11 +521,11 @@ export const Settings = () => {
             </div>
 
             {/* Submit Action */}
-            <div className="pt-6 mt-auto">
+            <div className="pt-6 mt-auto space-y-3">
               <button
                 type="submit"
                 disabled={updateMutation.isPending}
-                className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:opacity-90 disabled:opacity-50 text-background font-bold rounded-xl transition-all shadow-glow flex items-center justify-center gap-2 text-sm"
+                className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:opacity-90 disabled:opacity-50 text-background font-bold rounded-xl transition-all shadow-glow flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 {updateMutation.isPending ? (
                   <>
@@ -539,6 +539,17 @@ export const Settings = () => {
                   </>
                 )}
               </button>
+
+              {onNext && (
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="w-full py-3 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+                >
+                  <span>Proceed to Audience Personas</span>
+                  <span>&rarr;</span>
+                </button>
+              )}
             </div>
 
           </div>
