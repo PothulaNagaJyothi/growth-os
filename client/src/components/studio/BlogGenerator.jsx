@@ -30,6 +30,28 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
     setTimeout(() => setShowToast(false), 4000);
   };
 
+  const [selectedAngle, setSelectedAngle] = useState('');
+
+  // Sync selectedAngle state when topic selection changes
+  useEffect(() => {
+    if (selectedTopicId === initialTopicId) {
+      setSelectedAngle(initialCustomAngle || '');
+    } else {
+      setSelectedAngle('');
+    }
+  }, [selectedTopicId, initialTopicId, initialCustomAngle]);
+
+  // Fetch research report for the selected topic to get suggested angles
+  const { data: researchData, isLoading: researchLoading } = useQuery({
+    queryKey: ['research-report-angles', selectedTopicId],
+    queryFn: async () => {
+      const response = await api.get(`/research/${selectedTopicId}`);
+      return response.data.data;
+    },
+    enabled: !!selectedTopicId,
+    retry: false,
+  });
+
   // 1. Fetch active topics
   const { data: topics = [], isLoading: topicsLoading } = useQuery({
     queryKey: ['topics-select'],
@@ -85,7 +107,7 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
     startTask(taskId, async () => {
       const response = await api.post('/blogs/generate', { 
         topicId: selectedTopicId,
-        customAngle: initialCustomAngle
+        customAngle: selectedAngle
       });
       return response.data.data;
     });
@@ -232,6 +254,53 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
                   </p>
                 )}
               </div>
+
+              {/* Suggested Copy Angle Dropdown */}
+              {selectedTopicId && (
+                <div className="space-y-4 pt-2 animate-fade-in">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Suggested Copy Angle (from Market Research)</label>
+                    {researchLoading ? (
+                      <div className="flex items-center gap-2 py-2 text-xs text-slate-500">
+                        <Loader2 className="animate-spin text-primary animate-pulse" size={14} />
+                        <span>Loading suggested research angles...</span>
+                      </div>
+                    ) : researchData?.suggestedAngles && researchData.suggestedAngles.length > 0 ? (
+                      <select
+                        value={selectedAngle}
+                        onChange={(e) => setSelectedAngle(e.target.value)}
+                        className="w-full px-4 py-3 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                      >
+                        <option value="" className="bg-background text-slate-400">-- Select a suggested angle --</option>
+                        {researchData.suggestedAngles.map((angle, index) => (
+                          <option key={index} value={angle} className="bg-background text-white truncate">
+                            {angle}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-[10px] text-amber-400/90 italic">
+                        No suggested copy angles found. Make sure to trigger market research synthesis for this topic first.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Copy Angle Editor */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Active Content Angle / Theme Hook</label>
+                    <textarea
+                      rows={2}
+                      value={selectedAngle}
+                      onChange={(e) => setSelectedAngle(e.target.value)}
+                      placeholder="Specify a custom strategic focus, angle, or hooks..."
+                      className="w-full px-4 py-2.5 bg-background/60 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary transition-colors resize-none leading-relaxed"
+                    />
+                    <p className="text-[9px] text-slate-500">
+                      The AI content generation pipeline will prioritize this strategic angle. You can select one from the dropdown or type a custom one.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {activeTopic && (
                 <div className="space-y-3 pt-3 animate-fade-in text-xs">
