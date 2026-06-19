@@ -15,7 +15,8 @@ import {
   ExternalLink,
   BookOpen,
   Calendar,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 
 export const KnowledgeBase = () => {
@@ -27,6 +28,10 @@ export const KnowledgeBase = () => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedText, setSelectedText] = useState(null);
   const [selectedFileName, setSelectedFileName] = useState('');
+  const [selectedDocId, setSelectedDocId] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [summaryTextVal, setSummaryTextVal] = useState('');
+  const [extractingId, setExtractingId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
 
   // Notices
@@ -82,6 +87,47 @@ export const KnowledgeBase = () => {
       setSelectedText(null);
     }
   });
+
+  // 4. React Query: Update Document Summary Mutation
+  const updateSummaryMutation = useMutation({
+    mutationFn: async ({ id, summaryText }) => {
+      const response = await api.put(`/knowledge/${id}/summary`, { summaryText });
+      return response.data.data;
+    },
+    onSuccess: (updatedDoc) => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge'] });
+      triggerToast('AI summary updated successfully.');
+      setSelectedText(updatedDoc.summaryText);
+      setIsEditing(false);
+    },
+    onError: (err) => {
+      setErrorAlert(err.response?.data?.error || 'Failed to update summary.');
+    }
+  });
+
+  // 5. React Query: Extract Brand Profile & Personas Mutation
+  const extractMutation = useMutation({
+    mutationFn: async (id) => {
+      setExtractingId(id);
+      const response = await api.post(`/knowledge/${id}/extract`);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      triggerToast('AI Brand Context & Personas extracted successfully!');
+      setExtractingId(null);
+      // Wait 1.5 seconds and redirect to brand setup profile tab
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['company'] });
+        queryClient.invalidateQueries({ queryKey: ['personas'] });
+        window.location.href = '/brand?tab=profile';
+      }, 1500);
+    },
+    onError: (err) => {
+      setErrorAlert(err.response?.data?.error || 'Failed to extract brand details.');
+      setExtractingId(null);
+    }
+  });
+
 
   // Trigger floating notifications
   const triggerToast = (msg) => {
@@ -148,8 +194,11 @@ export const KnowledgeBase = () => {
   };
 
   const handleViewText = (doc) => {
+    setSelectedDocId(doc._id);
     setSelectedFileName(doc.fileName);
     setSelectedText(doc.summaryText || doc.extractedText);
+    setSummaryTextVal(doc.summaryText || doc.extractedText || '');
+    setIsEditing(false);
   };
 
   return (
@@ -297,7 +346,21 @@ export const KnowledgeBase = () => {
                     <ExternalLink size={10} />
                   </a>
 
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 items-center flex-wrap">
+                    <button
+                      onClick={() => extractMutation.mutate(doc._id)}
+                      disabled={extractingId !== null}
+                      className="p-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100/50 rounded-lg text-indigo-750 hover:text-indigo-850 transition-all flex items-center gap-1 text-[10px] font-bold disabled:opacity-50 cursor-pointer"
+                      title="Extract Brand Profile & Personas"
+                    >
+                      {extractingId === doc._id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={12} className="text-indigo-600" />
+                      )}
+                      <span>Extract Profile</span>
+                    </button>
+
                     <button
                       onClick={() => handleViewText(doc)}
                       className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-bold"
@@ -314,6 +377,7 @@ export const KnowledgeBase = () => {
                       <Trash2 size={12} />
                     </button>
                   </div>
+
                 </div>
               </div>
             ))}
@@ -324,47 +388,84 @@ export const KnowledgeBase = () => {
       {/* Extracted Text Dialog Popup Modal Overlay */}
       {selectedText !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-2xl glass-card rounded-2xl border border-white/10 shadow-2xl relative flex flex-col max-h-[85vh]">
+          <div className="w-full max-w-2xl bg-white border border-slate-200 shadow-2xl rounded-2xl relative flex flex-col max-h-[85vh]">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-white">AI Grounding Summary Context</h3>
-                <p className="text-[10px] text-primary truncate mt-0.5 max-w-sm sm:max-w-md">{selectedFileName}</p>
+                <h3 className="text-lg font-bold text-slate-900">AI Grounding Summary Context</h3>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5 max-w-sm sm:max-w-md">{selectedFileName}</p>
               </div>
               <button
-                onClick={() => setSelectedText(null)}
-                className="p-1 hover:bg-white/5 text-slate-400 hover:text-white rounded-lg transition-colors"
+                onClick={() => { setSelectedText(null); setIsEditing(false); }}
+                className="p-1 hover:bg-slate-50 text-slate-400 hover:text-slate-600 rounded-lg transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Modal Scrollable Text Content */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 border-y border-slate-200/50 max-h-[50vh] select-text">
-              {selectedText ? (
-                <div 
-                  className="text-xs md:text-sm text-slate-700 leading-relaxed space-y-4"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(selectedText) }}
+            {/* Modal Scrollable Text Content / Editable Textarea */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 border-y border-slate-100 max-h-[50vh] select-text flex flex-col">
+              {isEditing ? (
+                <textarea
+                  value={summaryTextVal}
+                  onChange={(e) => setSummaryTextVal(e.target.value)}
+                  className="w-full flex-1 min-h-[30vh] p-3 text-slate-800 border border-slate-350 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm resize-y"
+                  placeholder="Type or modify summary text here..."
                 />
               ) : (
-                <p className="text-xs text-slate-400 font-mono">No text content parsed in this reference document.</p>
+                selectedText ? (
+                  <div 
+                    className="text-xs md:text-sm text-slate-700 leading-relaxed space-y-4"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdownToHTML(selectedText) }}
+                  />
+                ) : (
+                  <p className="text-xs text-slate-450 font-mono">No summary text parsed in this document.</p>
+                )
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-white/5 flex justify-end">
-              <button
-                onClick={() => setSelectedText(null)}
-                className="px-5 py-2.5 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all text-background font-bold rounded-xl text-xs shadow-glow"
-              >
-                Done View Context
-              </button>
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-2">
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                    disabled={updateSummaryMutation.isPending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => updateSummaryMutation.mutate({ id: selectedDocId, summaryText: summaryTextVal })}
+                    className="px-5 py-2.5 bg-[#f25b18] hover:bg-[#d84a0c] text-white font-bold rounded-xl text-xs shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    disabled={updateSummaryMutation.isPending}
+                  >
+                    {updateSummaryMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : 'Save Summary'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    Edit Summary
+                  </button>
+                  <button
+                    onClick={() => setSelectedText(null)}
+                    className="px-5 py-2.5 bg-[#f25b18] hover:bg-[#d84a0c] text-white font-bold rounded-xl text-xs shadow-sm cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </>
+              )}
             </div>
 
           </div>
         </div>
       )}
+
 
       {/* Navigation guide to Topics & Research */}
       {!isLoading && !isError && documentsData && documentsData.length > 0 && (

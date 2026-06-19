@@ -1,4 +1,7 @@
 const KnowledgeBase = require('../models/KnowledgeBase');
+const Company = require('../models/Company');
+const Persona = require('../models/Persona');
+const User = require('../models/User');
 const cloudinaryService = require('../services/cloudinaryService');
 const textExtractor = require('../services/textExtractor');
 const aiService = require('../services/aiService');
@@ -106,3 +109,123 @@ exports.deleteDocument = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Extract brand details & personas from a knowledge document
+// @route   POST /api/knowledge/:id/extract
+// @access  Private
+exports.extractBrandContext = async (req, res, next) => {
+  try {
+    const document = await KnowledgeBase.findById(req.params.id);
+
+    if (!document) {
+      return res.status(404).json({ success: false, error: 'Document not found' });
+    }
+
+    if (document.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to access this document' });
+    }
+
+    if (!document.extractedText || document.extractedText.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Document does not contain any extracted text to analyze.' });
+    }
+
+    logger.info(`Starting AI brand context and persona extraction for doc: ${document.fileName}`);
+    const brandData = await aiService.extractBrandProfileAndPersonas(document.extractedText, req.user.companyId);
+
+    if (!brandData) {
+      return res.status(550).json({ success: false, error: 'Failed to extract brand context using AI' });
+    }
+
+    // 1. Update or create Company details
+    let company = await Company.findById(req.user.companyId);
+    if (!company) {
+      company = await Company.create({
+        companyName: brandData.company?.companyName || 'Extracted Brand',
+        website: brandData.company?.website || '',
+        industry: brandData.company?.industry || '',
+        productDescription: brandData.company?.productDescription || '',
+        targetAudience: brandData.company?.targetAudience || '',
+        brandVoice: brandData.company?.brandVoice || '',
+        competitors: brandData.company?.competitors || [],
+        createdBy: req.user.id
+      });
+      await User.findByIdAndUpdate(req.user.id, { companyId: company._id });
+      req.user.companyId = company._id;
+    } else {
+      company.companyName = brandData.company?.companyName || company.companyName;
+      company.website = brandData.company?.website || company.website;
+      company.industry = brandData.company?.industry || company.industry;
+      company.productDescription = brandData.company?.productDescription || company.productDescription;
+      company.targetAudience = brandData.company?.targetAudience || company.targetAudience;
+      company.brandVoice = brandData.company?.brandVoice || company.brandVoice;
+      company.competitors = brandData.company?.competitors || company.competitors;
+      await company.save();
+    }
+
+    // 2. Create target personas from extracted list
+    const createdPersonas = [];
+    if (Array.isArray(brandData.personas)) {
+      // Clear old personas if they exist (to overwrite with fresh ones)
+      await Persona.deleteMany({ companyId: company._id });
+      
+      for (const p of brandData.personas) {
+        if (p.personaName && p.tone) {
+          const newPersona = await Persona.create({
+            companyId: company._id,
+            personaName: p.personaName,
+            tone: p.tone,
+            writingStyle: p.writingStyle || '',
+            audienceType: p.audienceType || '',
+            description: p.description || ''
+          });
+          createdPersonas.push(newPersona);
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully extracted and updated brand context and audience personas.',
+      data: {
+        company,
+        personas: createdPersonas
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update knowledge document summary
+// @route   PUT /api/knowledge/:id/summary
+// @access  Private
+exports.updateDocumentSummary = async (req, res, next) => {
+  try {
+    const document = await KnowledgeBase.findById(req.params.id);
+
+    if (!document) {
+      return res.status(404).json({ success: false, error: 'Document not found' });
+    }
+
+    if (document.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ success: false, error: 'Not authorized to modify this document' });
+    }
+
+    const { summaryText } = req.body;
+    if (summaryText === undefined) {
+      return res.status(400).json({ success: false, error: 'Please provide summaryText value' });
+    }
+
+    document.summaryText = summaryText;
+    await document.save();
+
+    res.status(200).json({
+      success: true,
+      data: document,
+      message: 'Document summary updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -1028,6 +1028,66 @@ Generate structured factual summary now:`;
       return extractedText.slice(0, 1200);
     }
   }
+
+  /**
+   * Service Method: extractBrandProfileAndPersonas() - extracts Company Profile & Persona details from raw text
+   */
+  async extractBrandProfileAndPersonas(extractedText, companyId = null) {
+    if (!extractedText || extractedText.trim() === '') {
+      return null;
+    }
+
+    const systemPrompt = `You are an expert brand analyst at Growth OS.
+Your task is to analyze the provided raw document text and extract details to populate a Company Profile and target Audience Personas.
+
+You MUST extract the information and return it strictly as a single JSON object.
+Do not include any markdown styling like \`\`\`json or introductory/concluding text. Only output the raw JSON object.
+
+The output JSON format MUST strictly match the following schema:
+{
+  "company": {
+    "companyName": "extracted company name (string)",
+    "website": "extracted URL if found (string)",
+    "industry": "industry name (string)",
+    "productDescription": "description of the product/service (string)",
+    "targetAudience": "high level description of target audience (string)",
+    "brandVoice": "voice and tone guidelines (string)",
+    "competitors": ["competitor name 1", "competitor name 2", ...]
+  },
+  "personas": [
+    {
+      "personaName": "descriptive persona name, e.g. Tech Savvy Marketer (string, required)",
+      "tone": "associated brand or audience tone, e.g. Professional and informative (string, required)",
+      "writingStyle": "writing style details, e.g. Active voice, clear and simple language (string)",
+      "audienceType": "e.g. B2B, B2C, Developer (string)",
+      "description": "brief description of the persona's role, pain points, and content interests (string)"
+    }
+  ]
+}`;
+
+    const userPrompt = `Raw Document Content:
+${extractedText.slice(0, 15000)}
+
+Extract Company and Persona details and return raw JSON now:`;
+
+    try {
+      const responseText = await this.queryAI([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ], { temperature: 0.2, max_tokens: 2000, companyId, processType: 'market_research' });
+
+      let cleanText = responseText.trim();
+      if (cleanText.startsWith('\`\`\`')) {
+        cleanText = cleanText.replace(/^\`\`\`(json)?/, '').replace(/\`\`\`$/, '').trim();
+      }
+
+      const result = JSON.parse(cleanText);
+      return result;
+    } catch (err) {
+      console.warn(`[AI SERVICE WARNING] extractBrandProfileAndPersonas failed:`, err.message);
+      return null;
+    }
+  }
 }
 
 module.exports = new AIService();
