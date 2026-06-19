@@ -14,9 +14,10 @@ import {
   Check,
   Plus,
   Eye,
-  Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 const statusColors = {
@@ -304,17 +305,20 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
           </div>
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-white/5 pt-6 gap-4">
-              <span className="text-xs text-slate-400">
-                Showing <strong className="text-white">{(currentPage - 1) * itemsPerPage + 1}</strong> to{" "}
-                <strong className="text-white">
-                  {Math.min(currentPage * itemsPerPage, filteredBlogs.length)}
-                </strong>{" "}
-                of <strong className="text-white">{filteredBlogs.length}</strong> posts
-              </span>
+          {totalPages >= 1 && (
+            <div className="flex flex-col items-center justify-center border-t border-white/5 pt-6 gap-3">
+              <div className="flex items-center gap-1.5 justify-center">
+                {/* First Page */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  title="First Page"
+                >
+                  <ChevronsLeft size={14} />
+                </button>
 
-              <div className="flex items-center gap-1.5">
+                {/* Previous Page */}
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
@@ -342,6 +346,7 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
                   );
                 })}
 
+                {/* Next Page */}
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
@@ -350,7 +355,25 @@ export const BlogList = ({ onOpenEditor, onOpenPreview, onOpenGenerate }) => {
                 >
                   <ChevronRight size={14} />
                 </button>
+
+                {/* Last Page */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                  title="Last Page"
+                >
+                  <ChevronsRight size={14} />
+                </button>
               </div>
+
+              <span className="text-xs text-slate-400">
+                Showing <strong className="text-white">{(currentPage - 1) * itemsPerPage + 1}</strong> to{" "}
+                <strong className="text-white">
+                  {Math.min(currentPage * itemsPerPage, filteredBlogs.length)}
+                </strong>{" "}
+                of <strong className="text-white">{filteredBlogs.length}</strong> posts
+              </span>
             </div>
           )}
         </div>
