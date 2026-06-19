@@ -6,6 +6,7 @@ const cloudinaryService = require('../services/cloudinaryService');
 const textExtractor = require('../services/textExtractor');
 const aiService = require('../services/aiService');
 const logger = require('../utils/logger');
+const axios = require('axios');
 
 // @desc    Get all company knowledge documents
 // @route   GET /api/knowledge
@@ -228,4 +229,173 @@ exports.updateDocumentSummary = async (req, res, next) => {
     next(error);
   }
 };
+
+// Helper to strip HTML tags and extract clean readable text
+const cleanHtmlToText = (html) => {
+  if (!html) return '';
+  // Strip head, style, script tag contents
+  let text = html.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
+  text = text.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '');
+  text = text.replace(/<head[^>]*>([\s\S]*?)<\/head>/gi, '');
+  // Replace standard block elements with newlines to preserve separation
+  text = text.replace(/<\/p>/gi, '\n');
+  text = text.replace(/<\/div>/gi, '\n');
+  text = text.replace(/<\/h[1-6]>/gi, '\n\n');
+  text = text.replace(/<li>/gi, '\n* ');
+  // Strip all remaining HTML tags
+  text = text.replace(/<[^>]+>/g, ' ');
+  // Decode HTML entities (basic ones)
+  text = text.replace(/&nbsp;/g, ' ')
+             .replace(/&amp;/g, '&')
+             .replace(/&lt;/g, '<')
+             .replace(/&gt;/g, '>')
+             .replace(/&quot;/g, '"')
+             .replace(/&apos;/g, "'");
+  // Collapse whitespace
+  text = text.replace(/[ \t]+/g, ' ');
+  text = text.replace(/\n\s*\n+/g, '\n\n');
+  return text.trim();
+};
+
+// @desc    Crawl website URL, create KnowledgeBase entry, and extract brand profile + personas
+// @route   POST /api/knowledge/crawl
+// @access  Private
+exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
+    }
+
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'Please provide a website URL to crawl.' });
+    }
+
+    // Format URL if protocol is missing
+    let targetUrl = url.trim();
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      targetUrl = `https://${targetUrl}`;
+    }
+
+    logger.info(`Starting website crawling for URL: ${targetUrl}`);
+
+    // 1. Crawl URL contents
+    let htmlContent = '';
+    try {
+      const response = await axios.get(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+        },
+        timeout: 10000 // 10s timeout
+      });
+      htmlContent = response.data;
+    } catch (crawlErr) {
+      logger.error(`Website crawl failed for URL ${targetUrl}: ${crawlErr.message}`);
+      return res.status(400).json({
+        success: false,
+        error: `Failed to crawl website URL. Details: ${crawlErr.message}`
+      });
+    }
+
+    // 2. Extract clean text
+    const extractedText = cleanHtmlToText(htmlContent);
+    if (!extractedText || extractedText.length < 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'The crawled website did not return sufficient readable text content to analyze.'
+      });
+    }
+
+    logger.info(`Text successfully extracted from URL: ${targetUrl}. Cleaned length: ${extractedText.length} chars.`);
+
+    // 3. Summarize extracted content to create AI summary
+    const cleanDomain = targetUrl.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0];
+    const documentName = `${cleanDomain} Website Context`;
+
+    logger.info(`Summarizing website content for ${documentName}`);
+    const summaryText = await aiService.summarizeDocument(documentName, extractedText, req.user.companyId);
+
+    // 4. Create KnowledgeBase document entry
+    const document = await KnowledgeBase.create({
+      companyId: req.user.companyId,
+      fileName: documentName,
+      fileType: 'url',
+      fileUrl: targetUrl,
+      publicId: `url_${Date.now()}`,
+      extractedText,
+      summaryText
+    });
+
+    // 5. Extract Brand details & Personas from website text
+    logger.info(`Extracting Brand details & Personas from website text...`);
+    const brandData = await aiService.extractBrandProfileAndPersonas(extractedText, req.user.companyId);
+
+    let company = null;
+    const createdPersonas = [];
+
+    if (brandData) {
+      // Create or update Company profile
+      company = await Company.findById(req.user.companyId);
+      if (!company) {
+        company = await Company.create({
+          companyName: brandData.company?.companyName || cleanDomain,
+          website: targetUrl,
+          industry: brandData.company?.industry || '',
+          productDescription: brandData.company?.productDescription || '',
+          targetAudience: brandData.company?.targetAudience || '',
+          brandVoice: brandData.company?.brandVoice || '',
+          competitors: brandData.company?.competitors || [],
+          createdBy: req.user.id
+        });
+        await User.findByIdAndUpdate(req.user.id, { companyId: company._id });
+        req.user.companyId = company._id;
+      } else {
+        company.companyName = brandData.company?.companyName || company.companyName;
+        company.website = targetUrl || company.website;
+        company.industry = brandData.company?.industry || company.industry;
+        company.productDescription = brandData.company?.productDescription || company.productDescription;
+        company.targetAudience = brandData.company?.targetAudience || company.targetAudience;
+        company.brandVoice = brandData.company?.brandVoice || company.brandVoice;
+        company.competitors = brandData.company?.competitors || company.competitors;
+        await company.save();
+      }
+
+      // Create target audience personas
+      if (Array.isArray(brandData.personas)) {
+        // Clear old personas if they exist (to prevent crossovers and keep fresh data)
+        await Persona.deleteMany({ companyId: company._id });
+
+        for (const p of brandData.personas) {
+          if (p.personaName && p.tone) {
+            const newPersona = await Persona.create({
+              companyId: company._id,
+              personaName: p.personaName,
+              tone: p.tone,
+              writingStyle: p.writingStyle || '',
+              audienceType: p.audienceType || '',
+              description: p.description || ''
+            });
+            createdPersonas.push(newPersona);
+          }
+        }
+      }
+    } else {
+      logger.warn(`AI brand extraction did not return valid context for URL: ${targetUrl}`);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully crawled website, created Knowledge Base entry, and updated brand details & personas.',
+      data: {
+        document,
+        company,
+        personas: createdPersonas
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

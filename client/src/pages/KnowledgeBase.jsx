@@ -33,6 +33,8 @@ export const KnowledgeBase = () => {
   const [summaryTextVal, setSummaryTextVal] = useState('');
   const [extractingId, setExtractingId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [activeUploadTab, setActiveUploadTab] = useState('upload'); // 'upload' or 'url'
+  const [websiteUrl, setWebsiteUrl] = useState('');
 
   // Notices
   const [showToast, setShowToast] = useState(false);
@@ -127,6 +129,30 @@ export const KnowledgeBase = () => {
       setExtractingId(null);
     }
   });
+
+  // 6. React Query: Crawl Website & Extract Brand Mutation
+  const crawlMutation = useMutation({
+    mutationFn: async (url) => {
+      const response = await api.post('/knowledge/crawl', { url });
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['knowledge'] });
+      queryClient.invalidateQueries({ queryKey: ['company'] });
+      queryClient.invalidateQueries({ queryKey: ['personas'] });
+      triggerToast('Website crawled & brand context generated successfully!');
+      setWebsiteUrl('');
+      setActiveUploadTab('upload');
+      // Wait 1.5 seconds and redirect to brand setup company profile tab
+      setTimeout(() => {
+        window.location.href = '/brand?tab=profile';
+      }, 1500);
+    },
+    onError: (err) => {
+      setErrorAlert(err.response?.data?.error || 'Failed to crawl website.');
+    }
+  });
+
 
 
   // Trigger floating notifications
@@ -232,54 +258,123 @@ export const KnowledgeBase = () => {
         </div>
       )}
 
-      {/* Drag & Drop Upload Card Area */}
-      <div
-        onDragEnter={handleDrag}
-        onDragOver={handleDrag}
-        onDragLeave={handleDrag}
-        onDrop={handleDrop}
-        className={`glass-card rounded-2xl border p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${
-          dragActive 
-            ? 'border-primary bg-primary/5 shadow-glow scale-[0.99]' 
-            : 'border-white/5 hover:border-white/10'
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          accept=".pdf,.docx,.txt"
-          onChange={handleFileSelect}
-        />
-
-        {uploadProgress !== null ? (
-          <div className="space-y-4 py-6 w-full max-w-xs">
-            <Loader2 className="animate-spin text-primary mx-auto" size={36} />
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-300">Extracting Text & Syncing Assets...</p>
-              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-primary font-bold">{uploadProgress}% complete</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4 py-4 cursor-pointer" onClick={triggerFileSelect}>
-            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 hover:border-primary/20 flex items-center justify-center mx-auto text-slate-400 hover:text-primary transition-all shadow-inner group">
-              <UploadCloud size={28} className="group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-white">
-                Drag and drop your reference file here, or <span className="text-primary hover:underline">browse files</span>
-              </p>
-              <p className="text-xs text-slate-500">Supports PDF, DOCX, and TXT documents up to 10MB limits</p>
-            </div>
-          </div>
-        )}
+      {/* Tab Selector */}
+      <div className="flex border-b border-slate-200 gap-4 mb-4 text-sm justify-start">
+        <button
+          onClick={() => setActiveUploadTab('upload')}
+          className={`pb-2 font-bold cursor-pointer transition-colors ${
+            activeUploadTab === 'upload' ? 'text-[#f25b18] border-b-2 border-[#f25b18]' : 'text-slate-500 hover:text-[#f25b18]'
+          }`}
+        >
+          Upload Reference File
+        </button>
+        <button
+          onClick={() => setActiveUploadTab('url')}
+          className={`pb-2 font-bold cursor-pointer transition-colors ${
+            activeUploadTab === 'url' ? 'text-[#f25b18] border-b-2 border-[#f25b18]' : 'text-slate-500 hover:text-[#f25b18]'
+          }`}
+        >
+          Analyze Website URL
+        </button>
       </div>
+
+      {/* Upload zone or URL crawl zone */}
+      {activeUploadTab === 'upload' ? (
+        <div
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+          className={`bg-white rounded-2xl border p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${
+            dragActive 
+              ? 'border-[#f25b18] bg-orange-50/10 shadow-sm scale-[0.99]' 
+              : 'border-slate-200 hover:border-slate-350'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept=".pdf,.docx,.txt"
+            onChange={handleFileSelect}
+          />
+
+          {uploadProgress !== null ? (
+            <div className="space-y-4 py-6 w-full max-w-xs">
+              <Loader2 className="animate-spin text-[#f25b18] mx-auto" size={36} />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-500">Extracting Text & Syncing Assets...</p>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-[#f25b18] font-bold">{uploadProgress}% complete</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4 cursor-pointer" onClick={triggerFileSelect}>
+              <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 hover:border-[#f25b18]/25 flex items-center justify-center mx-auto text-slate-400 hover:text-[#f25b18] transition-all group">
+                <UploadCloud size={28} className="group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-800">
+                  Drag and drop your reference file here, or <span className="text-[#f25b18] hover:underline">browse files</span>
+                </p>
+                <p className="text-xs text-slate-500">Supports PDF, DOCX, and TXT documents up to 10MB limits</p>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm text-left space-y-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-slate-800">Analyze Company Website</h4>
+            <p className="text-xs text-slate-500">AI will crawl your company homepage, extract brand descriptions, target audience indicators, and automatically seed your profile.</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              placeholder="e.g. https://yourcompany.com"
+              className="flex-1 px-4 py-2.5 text-sm text-slate-850 border border-slate-350 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+              disabled={crawlMutation.isPending}
+            />
+            <button
+              onClick={() => {
+                if (!websiteUrl.trim()) {
+                  setErrorAlert('Please enter a website URL first.');
+                  return;
+                }
+                crawlMutation.mutate(websiteUrl);
+              }}
+              disabled={crawlMutation.isPending}
+              className="px-5 py-2.5 bg-[#f25b18] hover:bg-[#d84a0c] text-white font-bold rounded-lg text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {crawlMutation.isPending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Analyzing Website...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  <span>Analyze Website</span>
+                </>
+              )}
+            </button>
+          </div>
+          {crawlMutation.isPending && (
+            <div className="text-[11px] text-[#f25b18] animate-pulse font-semibold">
+              AI is downloading HTML page context, synthesizing facts, and building brand profile + personas...
+            </div>
+          )}
+        </div>
+      )}
+
 
       {/* Sourced Files Section */}
       <div className="space-y-4">
@@ -303,23 +398,32 @@ export const KnowledgeBase = () => {
             {documentsData.map((doc) => (
               <div 
                 key={doc._id} 
-                className="glass-card rounded-xl p-5 border border-white/5 flex flex-col justify-between hover:border-white/10 transition-all duration-300 group hover:shadow-glow-purple"
+                className="bg-white rounded-xl p-5 border border-slate-200 flex flex-col justify-between hover:border-slate-350 transition-all duration-300 group hover:shadow-sm"
               >
                 <div className="space-y-3 min-w-0">
                   {/* Icon & File Name */}
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-secondary/15 border border-secondary/20 text-accent flex items-center justify-center shrink-0">
-                      <FileText size={20} />
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                      doc.fileType === 'url' 
+                        ? 'bg-blue-50 border border-blue-100 text-blue-600'
+                        : 'bg-slate-50 border border-slate-100 text-slate-500'
+                    }`}>
+                      {doc.fileType === 'url' ? <Globe size={20} /> : <FileText size={20} />}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate text-white" title={doc.fileName}>
+                      <p className="text-sm font-semibold truncate text-slate-800" title={doc.fileName}>
                         {doc.fileName}
                       </p>
-                      <span className="inline-block text-[9px] font-extrabold px-2 py-0.5 mt-1 rounded bg-white/5 text-primary border border-white/5 uppercase tracking-wide">
-                        .{doc.fileType}
+                      <span className={`inline-block text-[9px] font-extrabold px-2 py-0.5 mt-1 rounded uppercase tracking-wide border ${
+                        doc.fileType === 'url'
+                          ? 'bg-blue-50 text-blue-700 border-blue-100'
+                          : 'bg-slate-50 text-slate-600 border-slate-200'
+                      }`}>
+                        {doc.fileType === 'url' ? 'URL' : `.${doc.fileType}`}
                       </span>
                     </div>
                   </div>
+
 
                   {/* Character stats & Date Sourced */}
                   <div className="space-y-1.5 text-xs text-slate-400">

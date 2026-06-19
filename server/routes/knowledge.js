@@ -6,7 +6,8 @@ const {
   uploadDocument,
   deleteDocument,
   extractBrandContext,
-  updateDocumentSummary
+  updateDocumentSummary,
+  crawlWebsiteAndExtractBrand
 } = require('../controllers/knowledgeController');
 const { protect } = require('../middleware/auth');
 
@@ -41,6 +42,7 @@ router.route('/')
 // Single file upload bound to field 'file'
 router.post('/upload', upload.single('file'), uploadDocument);
 
+router.post('/crawl', crawlWebsiteAndExtractBrand);
 router.post('/:id/extract', extractBrandContext);
 router.put('/:id/summary', updateDocumentSummary);
 
