@@ -253,35 +253,7 @@ CRITICAL CONTENT REQUIREMENTS:
    - Practical examples illustrating key points.
    - At least one internal/relative link (e.g. [internal link text](/dashboard) or similar relative path) integrated naturally.
    - At least one external link to an authoritative source (e.g. [Google Search](https://search.google.com/search-console/about)) integrated naturally.
-   - At least one illustrative image tag in markdown format with descriptive, context-aligned alt text. The image MUST be selected from the matching topic categories in the curated list of suitable external images below. It MUST be placed contextually in between content paragraphs or sections where it makes sense, rather than randomly. If the blog post topic/content does not match any of these categories (e.g. technology, cloud, marketing, design, business, office, healthcare), you MUST NOT include any image tag in the content under any circumstances. NEVER invent or include random/broken placeholder URLs.
-
-    Curated List of Verified External Images (Select the one most relevant to the post content):
-    * Healthcare / Medical / Lab / Health Checkup:
-      - ![Medical Lab Test](https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80)
-      - ![Doctor Consultation](https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&fit=crop&w=800&q=80)
-      - ![Stethoscope and clipboard](https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=800&q=80)
-      - ![Scientific Pipettes and Tubes](https://images.unsplash.com/photo-1581594693702-fbdc51b2763b?auto=format&fit=crop&w=800&q=80)
-    * Technology / Code / Cybersecurity:
-      - ![Alt Text](https://images.unsplash.com/photo-1607799279861-4dd421887fb3?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80)
-    * Cloud / Servers / Data Center:
-      - ![Alt Text](https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=800&q=80)
-    * Marketing / Growth / Charts / SEO:
-      - ![Alt Text](https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1531538606174-0f90ff5dce83?auto=format&fit=crop&w=800&q=80)
-    * Designing / Wireframes / UX/UI:
-      - ![Alt Text](https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1561070791-26c113006238?auto=format&fit=crop&w=800&q=80)
-    * Business / Corporate Meetings / Charts:
-      - ![Alt Text](https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1431540015161-0bf868a2d407?auto=format&fit=crop&w=800&q=80)
-    * Office / Workspace / Writing / Desk:
-      - ![Alt Text](https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80)
-      - ![Alt Text](https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80)
+   - CRITICAL IMAGE RULE: Do NOT include any images, image tags, or markdown image references (e.g., '![Alt Text](url)') in the content under any circumstances. Keep the post text-only.
 ${customAngle ? `CRITICAL TARGET ANGLE REQUIREMENT: You MUST write a completely distinct and unique blog post based on this specific copy angle/title hook: "${customAngle}". The H1 title, outline structure (H2/H3 headings), and body paragraphs must be fully tailored and customized to focus on this angle, ensuring it does not look like other articles on the same topic.\n` : ''}
 ${briefInstruction}
 Your response MUST be a valid JSON object matching the exact structure below. Do not wrap in markdown codeblocks.
@@ -298,7 +270,7 @@ Required JSON Structure:
       "talkingPoints": ["Talking point 1", "Talking point 2"]
     }
   ],
-  "content": "Full length (800-1200 words) comprehensive blog content in Markdown format, starting with an H1 heading, followed by a minimum of 4 H2 sections, nested H3 subheadings, an FAQ section, internal and external links, an alt-texted markdown image, and ending with a Conclusion section."
+  "content": "Full length (800-1200 words) comprehensive blog content in Markdown format, starting with an H1 heading, followed by a minimum of 4 H2 sections, nested H3 subheadings, an FAQ section, internal and external links, and ending with a Conclusion section. Do NOT include any image tags."
 }`;
 
     const userPrompt = `Generate a canonical blog post:
@@ -471,7 +443,7 @@ Format:
 - LinkedIn: Highly structured, engaging hooks, appropriate paragraph breaks, emoji highlights, and 3-5 tactical hashtags.
 - Medium: Immersive story introduction, detailed content summaries, and call-to-actions.
 
-CRITICAL IMAGE RULE: Do NOT include any images or image tags in the tailored platform copy for social media platforms (like LinkedIn). For long-form blogging platforms (like Medium, Dev.to, Substack), you may include or preserve an image tag in the content ONLY if it is highly relevant and suitable for the title and content of the blog. If there is no suitable image, do not include any image tag in the content.
+CRITICAL IMAGE RULE: Do NOT include any images, image tags, or markdown image references (e.g., '![Alt Text](url)') in the platform copy under any circumstances on all platforms. Keep the post strictly text-only.
 
 You MUST respond strictly in a valid JSON object format matching the exact structure below. Do not wrap in markdown codeblocks.
 
