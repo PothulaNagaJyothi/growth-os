@@ -6,6 +6,7 @@ const {
   uploadImage,
   getImagesByBlog,
   suggestPrompt,
+  downloadImage,
 } = require('../controllers/imageController');
 const { protect } = require('../middleware/auth');
 
@@ -37,6 +38,7 @@ router.use(protect);
 router.post('/generate', generateImage);
 router.post('/suggest-prompt', suggestPrompt);
 router.post('/upload', upload.single('image'), uploadImage);
+router.get('/download', downloadImage);
 router.get('/:blogId', getImagesByBlog);
 
 module.exports = router;

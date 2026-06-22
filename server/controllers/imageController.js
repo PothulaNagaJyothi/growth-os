@@ -227,3 +227,39 @@ exports.suggestPrompt = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Download/proxy remote image to bypass CORS and force download
+// @route   GET /api/images/download
+// @access  Private
+exports.downloadImage = async (req, res, next) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'Image URL is required' });
+    }
+
+    // Basic URL validation
+    if (!/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ success: false, error: 'Invalid image URL' });
+    }
+
+    logger.info(`[IMAGE CONTROLLER] Proxy downloading image URL: ${url}`);
+    
+    const response = await axios.get(url, {
+      responseType: 'stream',
+      timeout: 15000
+    });
+
+    const contentType = response.headers['content-type'] || 'image/png';
+    const extension = url.split('.').pop().split('?')[0] || 'png';
+    const filename = `downloaded_image_${Date.now()}.${extension}`;
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    response.data.pipe(res);
+  } catch (error) {
+    logger.error(`[IMAGE CONTROLLER] Failed to proxy download image: ${error.message}`);
+    res.status(500).json({ success: false, error: 'Failed to download image from source.' });
+  }
+};

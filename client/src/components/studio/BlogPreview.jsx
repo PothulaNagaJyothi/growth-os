@@ -494,8 +494,10 @@ export const BlogPreview = ({ blogId, onBack }) => {
   const handleDownloadCoverImage = async () => {
     if (!resolvedCoverImageUrl) return;
     try {
-      const response = await fetch(resolvedCoverImageUrl);
-      const blob = await response.blob();
+      const response = await api.get(`/images/download?url=${encodeURIComponent(resolvedCoverImageUrl)}`, {
+        responseType: 'blob'
+      });
+      const blob = response.data;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
