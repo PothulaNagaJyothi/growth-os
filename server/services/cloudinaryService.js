@@ -54,7 +54,9 @@ exports.uploadBuffer = (fileBuffer, fileName, options = {}) => {
         .replace(/[^a-zA-Z0-9_-]/g, '_')
         .replace(/_+/g, '_');
 
-      const publicId = `growth-os-knowledge/${Date.now()}_${sanitizedName}${ext}`;
+      const s3Folder = process.env.AWS_S3_FOLDER || 'growth-os-knowledge';
+      const cleanFolder = s3Folder.replace(/\/$/, ''); // Remove trailing slash
+      const publicId = `${cleanFolder}/${Date.now()}_${sanitizedName}${ext}`;
 
       let contentType = 'application/octet-stream';
       const extLower = ext.toLowerCase();
