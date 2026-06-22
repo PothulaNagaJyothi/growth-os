@@ -107,6 +107,11 @@ class AIService {
           continue;
         }
 
+        if (status === 400) {
+          console.error('[AI SERVICE ERROR] Bad Request (400) - aborting retries.', error.response?.data || error.message);
+          throw error;
+        }
+
         if (attempt >= maxAttempts) {
           console.error('[AI SERVICE ERROR] Max retry attempts exhausted.', error.response?.data || error.message);
           throw error;
@@ -945,6 +950,50 @@ Generate JSON payload now:`;
    * Analyze brand logo using Vision to extract color scheme
    */
   async analyzeLogoColors(imageUrl) {
+    let targetImageUrl = imageUrl;
+
+    if (imageUrl && imageUrl.startsWith('http')) {
+      try {
+        let cleanUrl = imageUrl.replace(/&amp;/g, '&');
+        console.log('[AI SERVICE] Downloading remote image for base64 conversion to bypass downstream blocks:', cleanUrl);
+        const response = await axios.get(cleanUrl, {
+          responseType: 'arraybuffer',
+          timeout: 8000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+          }
+        });
+        if (response.status === 200) {
+          const contentType = response.headers['content-type'] || 'image/png';
+          const base64Data = Buffer.from(response.data).toString('base64');
+          targetImageUrl = `data:${contentType};base64,${base64Data}`;
+          console.log('[AI SERVICE] Remote image converted successfully to base64 data URL.');
+        }
+      } catch (downloadErr) {
+        console.warn('[AI SERVICE WARNING] Failed to download remote image for base64 conversion, using raw URL:', downloadErr.message);
+      }
+    } else if (imageUrl && !imageUrl.startsWith('data:')) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const filename = imageUrl.replace(/^\/?uploads\//, '');
+        const filePath = path.join(__dirname, '../uploads', filename);
+        
+        if (fs.existsSync(filePath)) {
+          const fileBuffer = fs.readFileSync(filePath);
+          const ext = path.extname(filename).toLowerCase().replace('.', '');
+          const mimeType = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg';
+          targetImageUrl = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+          console.log('[AI SERVICE] Local image converted successfully to base64 for Vision analysis.');
+        } else {
+          console.warn('[AI SERVICE WARNING] Local file path does not exist on disk:', filePath);
+        }
+      } catch (fsErr) {
+        console.warn('[AI SERVICE WARNING] Failed to read local logo file for base64 conversion:', fsErr.message);
+      }
+    }
+
     const systemPrompt = `You are a Visual Identity Designer.
 Analyze the company logo and identify the dominant brand colors.
 Respond ONLY with a JSON object containing two fields:
@@ -961,7 +1010,7 @@ Do not output any markdown code blocks, backticks, or extra text. Just raw JSON.
       {
         type: 'image_url',
         image_url: {
-          url: imageUrl
+          url: targetImageUrl
         }
       }
     ];

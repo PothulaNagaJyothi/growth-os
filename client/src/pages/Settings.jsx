@@ -359,7 +359,7 @@ export const Settings = ({ onNext }) => {
                         <div className="relative group/preview shrink-0">
                           <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center p-2 border border-slate-200 shadow-sm overflow-hidden">
                             <img
-                              src={logo}
+                              src={logo.startsWith('http') || logo.startsWith('data:') ? logo : `${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/..${logo}`}
                               alt="Company Logo Preview"
                               className="max-w-full max-h-full object-contain"
                             />

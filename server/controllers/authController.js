@@ -27,7 +27,7 @@ exports.register = async (req, res, next) => {
       name,
       email,
       password,
-      role: 'admin', // First user is Admin
+      role: 'user', // Register as standard user
     });
 
     // Automatically create a Company profile for the user

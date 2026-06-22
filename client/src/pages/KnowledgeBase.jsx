@@ -16,7 +16,8 @@ import {
   BookOpen,
   Calendar,
   X,
-  Sparkles
+  Sparkles,
+  Globe
 } from 'lucide-react';
 
 export const KnowledgeBase = () => {
@@ -33,7 +34,6 @@ export const KnowledgeBase = () => {
   const [summaryTextVal, setSummaryTextVal] = useState('');
   const [extractingId, setExtractingId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
-  const [activeUploadTab, setActiveUploadTab] = useState('upload'); // 'upload' or 'url'
   const [websiteUrl, setWebsiteUrl] = useState('');
 
   // Notices
@@ -142,7 +142,6 @@ export const KnowledgeBase = () => {
       queryClient.invalidateQueries({ queryKey: ['personas'] });
       triggerToast('Website crawled & brand context generated successfully!');
       setWebsiteUrl('');
-      setActiveUploadTab('upload');
       // Wait 1.5 seconds and redirect to brand setup company profile tab
       setTimeout(() => {
         window.location.href = '/brand?tab=profile';
@@ -258,122 +257,126 @@ export const KnowledgeBase = () => {
         </div>
       )}
 
-      {/* Tab Selector */}
-      <div className="flex border-b border-slate-200 gap-4 mb-4 text-sm justify-start">
-        <button
-          onClick={() => setActiveUploadTab('upload')}
-          className={`pb-2 font-bold cursor-pointer transition-colors ${
-            activeUploadTab === 'upload' ? 'text-[#f25b18] border-b-2 border-[#f25b18]' : 'text-slate-500 hover:text-[#f25b18]'
-          }`}
-        >
-          Upload Reference File
-        </button>
-        <button
-          onClick={() => setActiveUploadTab('url')}
-          className={`pb-2 font-bold cursor-pointer transition-colors ${
-            activeUploadTab === 'url' ? 'text-[#f25b18] border-b-2 border-[#f25b18]' : 'text-slate-500 hover:text-[#f25b18]'
-          }`}
-        >
-          Analyze Website URL
-        </button>
-      </div>
-
-      {/* Upload zone or URL crawl zone */}
-      {activeUploadTab === 'upload' ? (
-        <div
-          onDragEnter={handleDrag}
-          onDragOver={handleDrag}
-          onDragLeave={handleDrag}
-          onDrop={handleDrop}
-          className={`bg-white rounded-2xl border p-8 flex flex-col items-center justify-center text-center transition-all duration-300 ${
-            dragActive 
-              ? 'border-[#f25b18] bg-orange-50/10 shadow-sm scale-[0.99]' 
-              : 'border-slate-200 hover:border-slate-350'
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf,.docx,.txt"
-            onChange={handleFileSelect}
-          />
-
-          {uploadProgress !== null ? (
-            <div className="space-y-4 py-6 w-full max-w-xs">
-              <Loader2 className="animate-spin text-[#f25b18] mx-auto" size={36} />
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-500">Extracting Text & Syncing Assets...</p>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                  <div 
-                    className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-[#f25b18] font-bold">{uploadProgress}% complete</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 py-4 cursor-pointer" onClick={triggerFileSelect}>
-              <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 hover:border-[#f25b18]/25 flex items-center justify-center mx-auto text-slate-400 hover:text-[#f25b18] transition-all group">
-                <UploadCloud size={28} className="group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-slate-800">
-                  Drag and drop your reference file here, or <span className="text-[#f25b18] hover:underline">browse files</span>
-                </p>
-                <p className="text-xs text-slate-500">Supports PDF, DOCX, and TXT documents up to 10MB limits</p>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm text-left space-y-4">
-          <div className="space-y-1">
-            <h4 className="text-sm font-bold text-slate-800">Analyze Company Website</h4>
-            <p className="text-xs text-slate-500">AI will crawl your company homepage, extract brand descriptions, target audience indicators, and automatically seed your profile.</p>
+      {/* Reference Material Input Grid */}
+      <div className="flex flex-col md:flex-row md:items-stretch gap-6 md:gap-8 text-left relative">
+        {/* Card 1: Upload Reference File */}
+        <div className="flex-1 bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col justify-between min-h-[240px]">
+          <div>
+            <h4 className="text-sm font-bold text-slate-800 font-sans">Upload Reference File</h4>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">AI will extract and index the text content of your document (PDF, DOCX, TXT) to ground your blogs.</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div
+            onDragEnter={handleDrag}
+            onDragOver={handleDrag}
+            onDragLeave={handleDrag}
+            onDrop={handleDrop}
+            className={`border rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300 mt-4 flex-1 ${
+              dragActive 
+                ? 'border-[#f25b18] bg-orange-50/10 shadow-sm scale-[0.99]' 
+                : 'border-slate-200 border-dashed hover:border-slate-350 bg-slate-50/30'
+            }`}
+          >
             <input
-              type="url"
-              value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              placeholder="e.g. https://yourcompany.com"
-              className="flex-1 px-4 py-2.5 text-sm text-slate-850 border border-slate-350 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-              disabled={crawlMutation.isPending}
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.docx,.txt"
+              onChange={handleFileSelect}
             />
-            <button
-              onClick={() => {
-                if (!websiteUrl.trim()) {
-                  setErrorAlert('Please enter a website URL first.');
-                  return;
-                }
-                crawlMutation.mutate(websiteUrl);
-              }}
-              disabled={crawlMutation.isPending}
-              className="px-5 py-2.5 bg-[#f25b18] hover:bg-[#d84a0c] text-white font-bold rounded-lg text-sm shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {crawlMutation.isPending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Analyzing Website...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} />
-                  <span>Analyze Website</span>
-                </>
-              )}
-            </button>
+
+            {uploadProgress !== null ? (
+              <div className="space-y-3 w-full max-w-xs py-4">
+                <Loader2 className="animate-spin text-[#f25b18] mx-auto" size={28} />
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-slate-500">Extracting Text & Uploading...</p>
+                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                    <div 
+                      className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-[9px] text-[#f25b18] font-bold">{uploadProgress}% complete</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 cursor-pointer w-full py-4" onClick={triggerFileSelect}>
+                <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto text-slate-400 group hover:text-[#f25b18] transition-all">
+                  <UploadCloud size={20} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-800">
+                    Drag/drop file here or <span className="text-[#f25b18] hover:underline">browse files</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400">PDF, DOCX, TXT up to 10MB</p>
+                </div>
+              </div>
+            )}
           </div>
-          {crawlMutation.isPending && (
-            <div className="text-[11px] text-[#f25b18] animate-pulse font-semibold">
-              AI is downloading HTML page context, synthesizing facts, and building brand profile + personas...
-            </div>
-          )}
         </div>
-      )}
+
+        {/* OR Divider */}
+        <div className="flex md:flex-col items-center justify-center my-2 md:my-0 relative shrink-0 min-w-[40px]">
+          <div className="hidden md:block w-px h-full bg-slate-200"></div>
+          <div className="block md:hidden w-full h-px bg-slate-200"></div>
+          <span className="absolute px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-bold text-slate-400 shadow-sm uppercase tracking-wider select-none">
+            or
+          </span>
+        </div>
+
+        {/* Card 2: Analyze Website URL */}
+        <div className="flex-1 bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col justify-between min-h-[240px]">
+          <div>
+            <h4 className="text-sm font-bold text-slate-800 font-sans">Analyze Website URL</h4>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">AI will crawl your company homepage to extract product descriptions and target audience personas.</p>
+          </div>
+
+          <div className="space-y-4 mt-4 flex-1 flex flex-col justify-center">
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <input
+                type="url"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                placeholder="e.g. https://yourcompany.com"
+                className="flex-1 px-3 py-2 text-sm text-slate-850 border border-slate-350 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                disabled={crawlMutation.isPending}
+              />
+              <button
+                onClick={() => {
+                  if (!websiteUrl.trim()) {
+                    setErrorAlert('Please enter a website URL first.');
+                    return;
+                  }
+                  crawlMutation.mutate(websiteUrl);
+                }}
+                disabled={crawlMutation.isPending}
+                className="px-4 py-2.5 bg-[#f25b18] hover:bg-[#d84a0c] text-white font-bold rounded-lg text-xs shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {crawlMutation.isPending ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={12} />
+                    <span>Analyze URL</span>
+                  </>
+                )}
+              </button>
+            </div>
+            {crawlMutation.isPending ? (
+              <div className="text-[10px] text-[#f25b18] animate-pulse font-semibold">
+                AI is downloading HTML page, synthesizing facts, and building brand profile + personas...
+              </div>
+            ) : (
+              <p className="text-[10px] text-slate-400 leading-normal">
+                Enter your company website to automatically seed details.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
 
 
       {/* Sourced Files Section */}
@@ -439,17 +442,7 @@ export const KnowledgeBase = () => {
                 </div>
 
                 {/* Card Actions Footer */}
-                <div className="pt-5 mt-4 border-t border-white/5 flex items-center justify-between">
-                  <a
-                    href={doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://localhost:4000${doc.fileUrl}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-white transition-colors"
-                  >
-                    <span>Raw Document</span>
-                    <ExternalLink size={10} />
-                  </a>
-
+                <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-end">
                   <div className="flex gap-1.5 items-center flex-wrap">
                     <button
                       onClick={() => extractMutation.mutate(doc._id)}
@@ -467,15 +460,15 @@ export const KnowledgeBase = () => {
 
                     <button
                       onClick={() => handleViewText(doc)}
-                      className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-300 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-bold"
+                      className="p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-lg text-slate-700 hover:text-slate-900 transition-all flex items-center gap-1 text-[10px] font-bold cursor-pointer"
                       title="View AI Grounding Summary"
                     >
-                      <Eye size={12} />
+                      <Eye size={12} className="text-slate-500" />
                       <span>View Summary</span>
                     </button>
                     <button
                       onClick={() => handleDelete(doc._id)}
-                      className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-all"
+                      className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-slate-450 hover:text-red-600 rounded-lg border border-red-500/10 transition-all cursor-pointer"
                       title="Delete File"
                     >
                       <Trash2 size={12} />

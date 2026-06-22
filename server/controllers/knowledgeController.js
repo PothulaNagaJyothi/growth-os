@@ -230,6 +230,61 @@ exports.updateDocumentSummary = async (req, res, next) => {
   }
 };
 
+// Helper to extract logo/icon URL from website HTML
+const extractLogoUrlFromHtml = (html, baseUrl) => {
+  try {
+    const iconRegexes = [
+      // 1. Prioritize modern raster formats (png, jpg, jpeg, webp) in link rel icon
+      /<link[^>]*rel=["'](?:shortcut\s+)?icon["'][^>]*href=["']([^"']+\.(?:png|jpg|jpeg|webp)(?:\?[^"']*)?)["']/i,
+      /<link[^>]*href=["']([^"']+\.(?:png|jpg|jpeg|webp)(?:\?[^"']*)?)["'][^>]*rel=["'](?:shortcut\s+)?icon["']/i,
+      // 2. Apple touch icons (usually high-res PNGs)
+      /<link[^>]*rel=["']apple-touch-icon["'][^>]*href=["']([^"']+)["']/i,
+      // 3. OpenGraph images (usually large PNG/JPG screenshots or logos)
+      /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i,
+      // 4. Img tags with logo ID or class
+      /<img[^>]*id=["']logo["'][^>]*src=["']([^"']+)["']/i,
+      /<img[^>]*class=["'](?:[^"']*logo[^"']*)["'][^>]*src=["']([^"']+)["']/i,
+      // 5. Img tags matching logo/icon keywords in src (excluding .ico)
+      /<img[^>]*src=["']([^"']*(?:logo|icon)[^"']+\.(?:png|jpg|jpeg|webp))["']/i,
+      // 6. Generic link rel icon fallback (which matches .ico or other extensions)
+      /<link[^>]*rel=["'](?:shortcut\s+)?icon["'][^>]*href=["']([^"']+)["']/i,
+      /<link[^>]*href=["']([^"']+)["']/i
+    ];
+
+    for (const regex of iconRegexes) {
+      const match = html.match(regex);
+      if (match && match[1]) {
+        let logoPath = match[1].trim();
+        // Decode HTML entities
+        logoPath = logoPath.replace(/&amp;/g, '&')
+                           .replace(/&lt;/g, '<')
+                           .replace(/&gt;/g, '>')
+                           .replace(/&quot;/g, '"')
+                           .replace(/&apos;/g, "'");
+
+        if (logoPath.startsWith('//')) {
+          return `https:${logoPath}`;
+        } else if (logoPath.startsWith('/')) {
+          const origin = new URL(baseUrl).origin;
+          return `${origin}${logoPath}`;
+        } else if (!/^https?:\/\//i.test(logoPath)) {
+          const urlObj = new URL(baseUrl);
+          const pathParts = urlObj.pathname.split('/');
+          pathParts.pop();
+          const baseDir = pathParts.join('/');
+          return `${urlObj.origin}${baseDir}/${logoPath}`;
+        }
+        return logoPath;
+      }
+    }
+    const origin = new URL(baseUrl).origin;
+    return `${origin}/favicon.ico`;
+  } catch (err) {
+    logger.warn(`[CRAWLER] Failed to parse logo URL from HTML: ${err.message}`);
+    return null;
+  }
+};
+
 // Helper to strip HTML tags and extract clean readable text
 const cleanHtmlToText = (html) => {
   if (!html) return '';
@@ -327,7 +382,61 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
       summaryText
     });
 
-    // 5. Extract Brand details & Personas from website text
+    // 5. Extract Logo URL and analyze brand colors from HTML
+    let logoUrl = null;
+    let brandColors = [];
+    let brandColorsDescription = '';
+    
+    try {
+      logoUrl = extractLogoUrlFromHtml(htmlContent, targetUrl);
+      if (logoUrl) {
+        logger.info(`Found logo URL from HTML: ${logoUrl}. Downloading image bytes...`);
+        try {
+          const logoResponse = await axios.get(logoUrl, {
+            responseType: 'arraybuffer',
+            timeout: 5000,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+              'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+            }
+          });
+          
+          if (logoResponse.status === 200) {
+            // Extract filename or default to logo.png
+            let filename = 'logo.png';
+            try {
+              const urlPath = new URL(logoUrl).pathname;
+              filename = urlPath.split('/').pop() || 'logo.png';
+            } catch (pErr) {
+              // Ignore parsing error
+            }
+            
+            logger.info(`Uploading crawled logo to Cloudinary...`);
+            const uploadResult = await cloudinaryService.uploadBuffer(logoResponse.data, filename);
+            logoUrl = uploadResult.url;
+            if (logoUrl && logoUrl.includes('res.cloudinary.com') && logoUrl.toLowerCase().endsWith('.ico')) {
+              logoUrl = logoUrl.replace(/\.ico$/i, '.png');
+            }
+            logger.info(`Logo uploaded successfully to Cloudinary: ${logoUrl}`);
+            
+            // Vision analysis on the uploaded Cloudinary logo
+            logger.info(`Extracting brand colors from Cloudinary logo URL...`);
+            const colorAnalysis = await aiService.analyzeLogoColors(logoUrl);
+            if (colorAnalysis && colorAnalysis.colors && colorAnalysis.colors.length > 0) {
+              brandColors = colorAnalysis.colors;
+              brandColorsDescription = colorAnalysis.description || '';
+              logger.info(`Vision identified brand colors: ${JSON.stringify(brandColors)}`);
+            }
+          }
+        } catch (downloadErr) {
+          logger.warn(`Failed to download or upload crawled logo: ${downloadErr.message}`);
+        }
+      }
+    } catch (logoErr) {
+      logger.warn(`Failed to resolve logo or brand colors from crawled HTML: ${logoErr.message}`);
+    }
+
+    // 6. Extract Brand details & Personas from website text
     logger.info(`Extracting Brand details & Personas from website text...`);
     const brandData = await aiService.extractBrandProfileAndPersonas(extractedText, req.user.companyId);
 
@@ -346,6 +455,9 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
           targetAudience: brandData.company?.targetAudience || '',
           brandVoice: brandData.company?.brandVoice || '',
           competitors: brandData.company?.competitors || [],
+          logo: logoUrl || '',
+          brandColors: brandColors || [],
+          brandColorsDescription: brandColorsDescription || '',
           createdBy: req.user.id
         });
         await User.findByIdAndUpdate(req.user.id, { companyId: company._id });
@@ -358,6 +470,11 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
         company.targetAudience = brandData.company?.targetAudience || company.targetAudience;
         company.brandVoice = brandData.company?.brandVoice || company.brandVoice;
         company.competitors = brandData.company?.competitors || company.competitors;
+        if (logoUrl) company.logo = logoUrl;
+        if (brandColors && brandColors.length > 0) {
+          company.brandColors = brandColors;
+          company.brandColorsDescription = brandColorsDescription;
+        }
         await company.save();
       }
 

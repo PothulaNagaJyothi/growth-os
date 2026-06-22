@@ -132,7 +132,10 @@ exports.uploadLogo = async (req, res, next) => {
     };
 
     const storageResult = await cloudinaryService.uploadBuffer(req.file.buffer, req.file.originalname, uploadOptions);
-    const logoUrl = storageResult.url;
+    let logoUrl = storageResult.url;
+    if (logoUrl && logoUrl.includes('res.cloudinary.com') && logoUrl.toLowerCase().endsWith('.ico')) {
+      logoUrl = logoUrl.replace(/\.ico$/i, '.png');
+    }
 
     // 2. Invoke Vision AI to analyze logo colors
     let brandColors = [];
