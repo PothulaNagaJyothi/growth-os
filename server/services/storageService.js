@@ -1,4 +1,3 @@
-const cloudinary = require('cloudinary').v2;
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const fs = require('fs');
 const path = require('path');
@@ -8,12 +7,6 @@ const logger = require('../utils/logger');
 const hasS3 = 
   process.env.AWS_ACCESS_KEY_ID && 
   process.env.AWS_SECRET_ACCESS_KEY;
-
-// Check credentials for Cloudinary
-const hasCloudinary = 
-  process.env.CLOUDINARY_CLOUD_NAME && 
-  process.env.CLOUDINARY_API_KEY && 
-  process.env.CLOUDINARY_API_SECRET;
 
 let s3Client = null;
 const bucketName = process.env.AWS_BUCKET_NAME || 'creative-os-assets';
@@ -27,19 +20,12 @@ if (hasS3) {
     }
   });
   logger.info('AWS S3 storage engine configuration loaded.');
-} else if (hasCloudinary) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-  logger.info('Cloudinary storage engine configuration loaded.');
 } else {
-  logger.warn('S3 and Cloudinary credentials missing in .env. Falling back to local file uploads.');
+  logger.warn('AWS S3 credentials missing in .env. Falling back to local file uploads.');
 }
 
 /**
- * Uploads a file buffer to S3, Cloudinary, or saves it locally as a fallback
+ * Uploads a file buffer to S3 or saves it locally as a fallback
  * @param {Buffer} fileBuffer - Sourced file buffer
  * @param {String} fileName - Sourced file name
  * @returns {Promise<Object>} - Sourced URL and asset key metadata
@@ -88,37 +74,7 @@ exports.uploadBuffer = (fileBuffer, fileName, options = {}) => {
           reject(err);
         });
 
-    // 2. Cloudinary Upload Path
-    } else if (hasCloudinary) {
-      const baseName = path.parse(fileName).name;
-      const sanitizedName = baseName
-        .replace(/[^a-zA-Z0-9_-]/g, '_')
-        .replace(/_+/g, '_');
-
-      const publicId = `${Date.now()}_${sanitizedName}`;
-
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'growth-os-knowledge',
-          resource_type: 'auto',
-          public_id: publicId,
-          ...options,
-        },
-        (error, result) => {
-          if (error) {
-            logger.error('Cloudinary Upload Stream Error: ' + error.message);
-            reject(error);
-          } else {
-            resolve({
-              url: result.secure_url,
-              public_id: result.public_id,
-            });
-          }
-        }
-      );
-      uploadStream.end(fileBuffer);
-
-    // 3. Local Storage Fallback
+    // 2. Local Storage Fallback
     } else {
       try {
         const uploadDir = path.join(__dirname, '../uploads');
@@ -145,10 +101,10 @@ exports.uploadBuffer = (fileBuffer, fileName, options = {}) => {
 };
 
 /**
- * Deletes a file asset from S3, Cloudinary, or local uploads folder
+ * Deletes a file asset from S3 or local uploads folder
  * @param {String} publicId - Sourced asset key metadata
  */
-exports.deleteAsset = async (publicId, resourceType) => {
+exports.deleteAsset = async (publicId) => {
   if (hasS3) {
     try {
       const command = new DeleteObjectCommand({
@@ -159,15 +115,6 @@ exports.deleteAsset = async (publicId, resourceType) => {
       logger.info(`Successfully deleted S3 asset: ${publicId}`);
     } catch (error) {
       logger.error(`AWS S3 Delete Error: ${error.message}`);
-    }
-  } else if (hasCloudinary) {
-    try {
-      const isRaw = resourceType === 'raw' || (publicId && /\.(pdf|docx|txt|doc|xls|xlsx|csv|pptx|ppt)$/i.test(publicId));
-      const rType = isRaw ? 'raw' : 'image';
-      await cloudinary.uploader.destroy(publicId, { resource_type: rType });
-      logger.info(`Successfully deleted Cloudinary ${rType} asset: ${publicId}`);
-    } catch (error) {
-      logger.error(`Cloudinary Delete Error: ${error.message}`);
     }
   } else {
     try {

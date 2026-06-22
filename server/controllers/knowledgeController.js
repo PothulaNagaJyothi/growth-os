@@ -2,7 +2,7 @@ const KnowledgeBase = require('../models/KnowledgeBase');
 const Company = require('../models/Company');
 const Persona = require('../models/Persona');
 const User = require('../models/User');
-const cloudinaryService = require('../services/cloudinaryService');
+const storageService = require('../services/storageService');
 const textExtractor = require('../services/textExtractor');
 const aiService = require('../services/aiService');
 const logger = require('../utils/logger');
@@ -46,7 +46,7 @@ exports.uploadDocument = async (req, res, next) => {
     logger.info(`Starting upload process for file: ${originalname} (${mimetype})`);
 
     // 1. Upload file buffer to Cloudinary (or local filesystem fallback)
-    const uploadResult = await cloudinaryService.uploadBuffer(buffer, originalname);
+    const uploadResult = await storageService.uploadBuffer(buffer, originalname);
     logger.info(`Upload completed. Sourced URL: ${uploadResult.url}`);
 
     // 2. Extract raw text from buffer based on file type
@@ -96,7 +96,7 @@ exports.deleteDocument = async (req, res, next) => {
     }
 
     // 1. Delete asset from Cloudinary or local uploads folder
-    await cloudinaryService.deleteAsset(document.publicId);
+    await storageService.deleteAsset(document.publicId);
 
     // 2. Delete database model record
     await KnowledgeBase.findByIdAndDelete(req.params.id);
@@ -411,13 +411,13 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
               // Ignore parsing error
             }
             
-            logger.info(`Uploading crawled logo to Cloudinary...`);
-            const uploadResult = await cloudinaryService.uploadBuffer(logoResponse.data, filename);
+            logger.info(`Uploading crawled logo to S3/Storage...`);
+            const uploadResult = await storageService.uploadBuffer(logoResponse.data, filename);
             logoUrl = uploadResult.url;
             if (logoUrl && logoUrl.includes('res.cloudinary.com') && logoUrl.toLowerCase().endsWith('.ico')) {
               logoUrl = logoUrl.replace(/\.ico$/i, '.png');
             }
-            logger.info(`Logo uploaded successfully to Cloudinary: ${logoUrl}`);
+            logger.info(`Logo uploaded successfully to S3/Storage: ${logoUrl}`);
             
             // Vision analysis on the uploaded Cloudinary logo
             logger.info(`Extracting brand colors from Cloudinary logo URL...`);

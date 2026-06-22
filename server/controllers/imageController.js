@@ -2,7 +2,7 @@ const axios = require('axios');
 const ImageMetadata = require('../models/ImageMetadata');
 const Blog = require('../models/Blog');
 const aiService = require('../services/aiService');
-const cloudinaryService = require('../services/cloudinaryService');
+const storageService = require('../services/storageService');
 const logger = require('../utils/logger');
 
 // @desc    Generate DALL-E image and store permanently in Cloudinary or Local uploads fallback
@@ -78,7 +78,7 @@ exports.generateImage = async (req, res, next) => {
       }
       
       // Upload buffer
-      storageResult = await cloudinaryService.uploadBuffer(buffer, `dalle_${blogId}_${Date.now()}.png`);
+      storageResult = await storageService.uploadBuffer(buffer, `dalle_${blogId}_${Date.now()}.png`);
       permanentUrl = storageResult.url;
       console.log('[IMAGE CONTROLLER] Permanent storage URL generated successfully.');
     } catch (downloadErr) {
@@ -134,7 +134,7 @@ exports.uploadImage = async (req, res, next) => {
     }
 
     // 2. Upload file buffer to permanent storage
-    const storageResult = await cloudinaryService.uploadBuffer(req.file.buffer, req.file.originalname);
+    const storageResult = await storageService.uploadBuffer(req.file.buffer, req.file.originalname);
 
     // 3. Save metadata to database
     const metadata = await ImageMetadata.create({

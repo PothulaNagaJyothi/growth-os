@@ -1,6 +1,6 @@
 const Company = require('../models/Company');
 const User = require('../models/User');
-const cloudinaryService = require('../services/cloudinaryService');
+const storageService = require('../services/storageService');
 const aiService = require('../services/aiService');
 
 // @desc    Get active company details
@@ -131,7 +131,7 @@ exports.uploadLogo = async (req, res, next) => {
       ]
     };
 
-    const storageResult = await cloudinaryService.uploadBuffer(req.file.buffer, req.file.originalname, uploadOptions);
+    const storageResult = await storageService.uploadBuffer(req.file.buffer, req.file.originalname, uploadOptions);
     let logoUrl = storageResult.url;
     if (logoUrl && logoUrl.includes('res.cloudinary.com') && logoUrl.toLowerCase().endsWith('.ico')) {
       logoUrl = logoUrl.replace(/\.ico$/i, '.png');
@@ -208,11 +208,11 @@ exports.deleteLogo = async (req, res, next) => {
             const pathParts = parts[1].split('/');
             const publicIdWithExt = pathParts.slice(1).join('/');
             const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
-            await cloudinaryService.deleteAsset(publicId);
+            await storageService.deleteAsset(publicId);
           }
         } else if (company.logo.startsWith('/uploads/')) {
           const filename = company.logo.replace('/uploads/', '');
-          await cloudinaryService.deleteAsset(filename);
+          await storageService.deleteAsset(filename);
         }
       } catch (cleanupErr) {
         console.warn('[COMPANY CONTROLLER WARNING] Logo file cleanup failed:', cleanupErr.message);
