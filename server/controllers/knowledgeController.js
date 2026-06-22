@@ -288,6 +288,46 @@ const extractLogoUrlFromHtml = (html, baseUrl) => {
 // Helper to strip HTML tags and extract clean readable text
 const cleanHtmlToText = (html) => {
   if (!html) return '';
+
+  let metaText = '';
+  try {
+    // Extract title
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      metaText += `Page Title: ${titleMatch[1].trim()}\n`;
+    }
+
+    // Extract meta description
+    const descRegexes = [
+      /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i,
+      /<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i
+    ];
+    for (const regex of descRegexes) {
+      const match = html.match(regex);
+      if (match && match[1]) {
+        metaText += `Description: ${match[1].trim()}\n`;
+        break;
+      }
+    }
+
+    // Extract meta keywords
+    const keywordsRegexes = [
+      /<meta[^>]*name=["']keywords["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']keywords["']/i
+    ];
+    for (const regex of keywordsRegexes) {
+      const match = html.match(regex);
+      if (match && match[1]) {
+        metaText += `Keywords: ${match[1].trim()}\n`;
+        break;
+      }
+    }
+  } catch (err) {
+    // Ignore meta extraction errors
+  }
+
   // Strip head, style, script tag contents
   let text = html.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
   text = text.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '');
@@ -309,7 +349,12 @@ const cleanHtmlToText = (html) => {
   // Collapse whitespace
   text = text.replace(/[ \t]+/g, ' ');
   text = text.replace(/\n\s*\n+/g, '\n\n');
-  return text.trim();
+  
+  let result = text.trim();
+  if (metaText) {
+    result = `${metaText}\n${result}`;
+  }
+  return result.trim();
 };
 
 // @desc    Crawl website URL, create KnowledgeBase entry, and extract brand profile + personas
