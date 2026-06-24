@@ -144,7 +144,7 @@ exports.getDashboardStats = async (req, res, next) => {
       Topic.find({ companyId }).sort({ createdAt: -1 }).limit(5),
       Blog.find({ companyId }).sort({ createdAt: -1 }).limit(5),
       Schedule.find({ companyId }).sort({ createdAt: -1 }).limit(5).populate('blogId'),
-      Telemetry.find({ companyId }).sort({ createdAt: -1 }).limit(10)
+      Telemetry.find({ companyId, processType: { $ne: 'image_generation' } }).sort({ createdAt: -1 }).limit(10)
     ]);
 
     const activities = [];

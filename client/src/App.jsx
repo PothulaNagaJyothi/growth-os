@@ -8,6 +8,7 @@ import { Dashboard } from './pages/Dashboard';
 import { BrandSetup } from './pages/BrandSetup';
 import { PlannerHub } from './pages/PlannerHub';
 import { BlogStudio } from './pages/BlogStudio';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Sparkles } from 'lucide-react';
 
@@ -128,6 +129,17 @@ export const App = () => {
                 <ProtectedRoute>
                   <DashboardLayout>
                     <PlannerHub />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <AdminDashboard />
                   </DashboardLayout>
                 </ProtectedRoute>
               }

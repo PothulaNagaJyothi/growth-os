@@ -45,6 +45,27 @@ export const DashboardLayout = ({ children }) => {
   const [blogTitles, setBlogTitles] = useState({});
   const [guideOpen, setGuideOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [credits, setCredits] = useState(null);
+
+  const fetchCredits = async () => {
+    try {
+      const response = await api.get('/credits/balance');
+      if (response.data && response.data.success) {
+        setCredits(response.data.data.creditsBalance);
+      }
+    } catch (err) {
+      console.error('Failed to fetch credit balance:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchCredits();
+      
+      const interval = setInterval(fetchCredits, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [user, location.pathname]);
 
   // Auto open guide on very first dashboard visit for newly signed-up users only
   useEffect(() => {
@@ -151,6 +172,14 @@ export const DashboardLayout = ({ children }) => {
     { label: 'Blogs Studio', icon: <BookOpen size={20} />, path: '/blogs' },
     { label: 'Content Planner', icon: <CalendarRange size={20} />, path: '/calendar' },
   ];
+
+  if (user && user.role === 'admin') {
+    menuItems.push({
+      label: 'Admin Control',
+      icon: <Sparkles size={20} className="text-primary" />,
+      path: '/admin'
+    });
+  }
 
   const handleLogout = async () => {
     await logout();
@@ -312,6 +341,14 @@ export const DashboardLayout = ({ children }) => {
 
           {/* Right Header Controls */}
           <div className="flex items-center gap-4 ml-auto">
+            {/* Credit Balance Badge */}
+            {credits !== null && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-bold text-primary shadow-glow-sm">
+                <Sparkles size={13} className="text-primary animate-pulse" />
+                <span>{credits} Credits</span>
+              </div>
+            )}
+
             {/* Quick Start Tour Button */}
             <button
               onClick={() => {

@@ -5,11 +5,14 @@ const Topic = require('../models/Topic');
 const Company = require('../models/Company');
 const aiService = require('../services/aiService');
 const seoAnalyzer = require('../services/seo-engine/seoAnalyzer');
+const creditService = require('../services/creditService');
 
 // @desc    Generate a platform-specific adapted blog post dynamically reading rules from MongoDB
 // @route   POST /api/render/:platform
 // @access  Private
 exports.generatePlatformRender = async (req, res, next) => {
+  let chargeResult = null;
+  let renderCost = 1;
   try {
     const { platform } = req.params;
     const { blogId } = req.body;
@@ -51,6 +54,25 @@ exports.generatePlatformRender = async (req, res, next) => {
     // Verify company ownership context
     if (blog.companyId.toString() !== req.user.companyId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to render this content' });
+    }
+
+    // Fetch credit settings and charge
+    const creditSettings = await creditService.getCreditSettings();
+    renderCost = creditSettings.textGenerationCost || 1;
+
+    try {
+      chargeResult = await creditService.chargeCreditsForGeneration({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: renderCost,
+        type: 'generation_text',
+        note: `Platform adaptation for ${config.platformName} (${renderCost} credits)`,
+      });
+    } catch (creditErr) {
+      return res.status(402).json({
+        success: false,
+        error: `Insufficient credits to adapt post. Cost: ${renderCost} credits.`,
+      });
     }
 
     const company = await Company.findById(blog.companyId);
@@ -146,6 +168,8 @@ Render the tailored JSON payload now:`;
       ], {
         temperature: 0.7,
         max_tokens: isLongForm ? 3500 : 2000,
+        companyId: req.user.companyId,
+        processType: 'platform_rendering'
       });
 
       let cleanText = responseText.trim();
@@ -523,6 +547,15 @@ This architecture directly addresses our campaign goal: *"${campaign.goal || 're
       data: renderedBlog,
     });
   } catch (error) {
+    if (chargeResult) {
+      await creditService.refundGenerationCredits({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: renderCost,
+        type: 'generation_text',
+        note: `Refund for failed platform adaptation: ${error.message || 'unknown error'}`,
+      });
+    }
     next(error);
   }
 };

@@ -77,6 +77,7 @@ app.use('/api/schedule', require('./routes/schedule'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/telemetry', require('./routes/telemetry'));
+app.use('/api/credits', require('./routes/credits'));
 
 // Register Global Error Handler
 app.use(errorHandler);

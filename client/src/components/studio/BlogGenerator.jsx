@@ -27,7 +27,17 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { tasks, startTask, clearTask } = useTasks();
-  const [selectedTopicId, setSelectedTopicId] = useState(initialTopicId || '');
+  const [selectedTopicId, setSelectedTopicId] = useState(() => {
+    return initialTopicId || localStorage.getItem('selected-topic-id') || '';
+  });
+
+  useEffect(() => {
+    if (selectedTopicId) {
+      localStorage.setItem('selected-topic-id', selectedTopicId);
+    } else {
+      localStorage.removeItem('selected-topic-id');
+    }
+  }, [selectedTopicId]);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -226,6 +236,7 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
         queryClient.invalidateQueries({ queryKey: ['blogs-list'] });
         triggerToast('Grounded SEO Blog generated successfully!');
         clearTask(taskId);
+        localStorage.removeItem('selected-topic-id');
         onGenerationComplete(newBlog._id);
       } else if (task.status === 'error') {
         const err = task.error;
@@ -301,7 +312,10 @@ export const BlogGenerator = ({ initialTopicId, initialCustomAngle, onBack, onGe
       {/* Back button and title */}
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <button
-          onClick={onBack}
+          onClick={() => {
+            localStorage.removeItem('selected-topic-id');
+            onBack();
+          }}
           disabled={isGenerating}
           className="px-3 py-2 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
         >

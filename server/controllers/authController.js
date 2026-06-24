@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Company = require('../models/Company');
+const CreditTransaction = require('../models/CreditTransaction');
+const creditService = require('../services/creditService');
 const jwt = require('jsonwebtoken');
 
 // Helper to generate Token
@@ -30,11 +32,32 @@ exports.register = async (req, res, next) => {
       role: 'user', // Register as standard user
     });
 
+    // Fetch credit settings
+    const creditSettings = await creditService.getCreditSettings();
+    const defaultCredits = creditSettings.defaultSignupCredits || 25;
+
     // Automatically create a Company profile for the user
     const company = await Company.create({
       companyName: companyName || `${name}'s Company`,
       createdBy: user._id,
+      creditsBalance: defaultCredits,
+      creditsTotalAllocated: defaultCredits,
+      creditsTotalPurchased: 0,
+      creditsTotalUsed: 0,
     });
+
+    // Create signup bonus transaction log
+    if (defaultCredits > 0) {
+      await CreditTransaction.create({
+        companyId: company._id,
+        userId: user._id,
+        amount: defaultCredits,
+        balanceAfter: defaultCredits,
+        type: 'signup_bonus',
+        note: 'Default free credits on signup',
+        createdBy: 'system',
+      });
+    }
 
     // Update user's company ID
     user.companyId = company._id;

@@ -4,6 +4,7 @@ const Company = require('../models/Company');
 const Research = require('../models/Research');
 const KnowledgeBase = require('../models/KnowledgeBase');
 const aiService = require('../services/aiService');
+const creditService = require('../services/creditService');
 const seoAnalyzer = require('../services/seo-engine/seoAnalyzer');
 const briefGenerator = require('../services/seo-engine/briefGenerator');
 const seoOptimizer = require('../services/seo-engine/seoOptimizer');
@@ -13,6 +14,8 @@ const contentValidator = require('../services/content-engine/contentValidator');
 // @route   POST /api/blogs/generate
 // @access  Private
 exports.generateBlog = async (req, res, next) => {
+  let chargeResult = null;
+  let textCost = 1;
   try {
     const mongoose = require('mongoose');
     const { topicId, blogId, customAngle } = req.body;
@@ -35,6 +38,25 @@ exports.generateBlog = async (req, res, next) => {
       return res.status(400).json({ 
         success: false, 
         error: 'Topic ID or Blog ID is required.' 
+      });
+    }
+
+    // Fetch credit settings and charge
+    const creditSettings = await creditService.getCreditSettings();
+    textCost = creditSettings.textGenerationCost || 1;
+
+    try {
+      chargeResult = await creditService.chargeCreditsForGeneration({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: textCost,
+        type: 'generation_text',
+        note: `Canonical blog generation charge (${textCost} credits)`,
+      });
+    } catch (creditErr) {
+      return res.status(402).json({
+        success: false,
+        error: `Insufficient credits to generate blog. Cost: ${textCost} credits.`,
       });
     }
 
@@ -325,6 +347,15 @@ exports.generateBlog = async (req, res, next) => {
       data: blog,
     });
   } catch (error) {
+    if (chargeResult) {
+      await creditService.refundGenerationCredits({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: textCost,
+        type: 'generation_text',
+        note: 'Refund for failed blog generation',
+      });
+    }
     next(error);
   }
 };

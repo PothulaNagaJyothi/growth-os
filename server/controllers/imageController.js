@@ -3,12 +3,15 @@ const ImageMetadata = require('../models/ImageMetadata');
 const Blog = require('../models/Blog');
 const aiService = require('../services/aiService');
 const storageService = require('../services/storageService');
+const creditService = require('../services/creditService');
 const logger = require('../utils/logger');
 
 // @desc    Generate DALL-E image and store permanently in Cloudinary or Local uploads fallback
 // @route   POST /api/images/generate
 // @access  Private
 exports.generateImage = async (req, res, next) => {
+  let chargeResult = null;
+  let imageCost = 3;
   try {
     const { blogId, prompt, dimensions = '1024x1024' } = req.body;
 
@@ -28,6 +31,25 @@ exports.generateImage = async (req, res, next) => {
 
     if (blog.companyId.toString() !== req.user.companyId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to manage assets for this blog' });
+    }
+
+    // Fetch credit settings and charge
+    const creditSettings = await creditService.getCreditSettings();
+    imageCost = creditSettings.imageGenerationCost || 3;
+
+    try {
+      chargeResult = await creditService.chargeCreditsForGeneration({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: imageCost,
+        type: 'generation_image',
+        note: `Image generation charge (${imageCost} credits)`,
+      });
+    } catch (creditErr) {
+      return res.status(402).json({
+        success: false,
+        error: `Insufficient credits to generate image. Cost: ${imageCost} credits.`,
+      });
     }
 
     // 2. Resolve or generate prompt dynamically
@@ -100,6 +122,15 @@ exports.generateImage = async (req, res, next) => {
       data: metadata,
     });
   } catch (error) {
+    if (chargeResult) {
+      await creditService.refundGenerationCredits({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: imageCost,
+        type: 'generation_image',
+        note: 'Refund for failed image generation',
+      });
+    }
     next(error);
   }
 };

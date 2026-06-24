@@ -48,6 +48,22 @@ const CompanySchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    creditsBalance: {
+      type: Number,
+      default: 25,
+    },
+    creditsTotalAllocated: {
+      type: Number,
+      default: 25,
+    },
+    creditsTotalPurchased: {
+      type: Number,
+      default: 0,
+    },
+    creditsTotalUsed: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

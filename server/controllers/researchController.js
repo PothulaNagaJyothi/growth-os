@@ -1,11 +1,14 @@
 const Research = require('../models/Research');
 const Topic = require('../models/Topic');
 const researchEngine = require('../services/research-engine/researchEngine');
+const creditService = require('../services/creditService');
 
 // @desc    Trigger AI research synthesis for a topic and store it
 // @route   POST /api/research/generate
 // @access  Private
 exports.generateResearch = async (req, res, next) => {
+  let chargeResult = null;
+  let researchCost = 1;
   try {
     const { topicId } = req.body;
     if (!topicId) {
@@ -24,6 +27,25 @@ exports.generateResearch = async (req, res, next) => {
 
     if (topic.companyId.toString() !== req.user.companyId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to research this topic' });
+    }
+
+    // Fetch credit settings and charge
+    const creditSettings = await creditService.getCreditSettings();
+    researchCost = creditSettings.researchAnalysisCost || 1;
+
+    try {
+      chargeResult = await creditService.chargeCreditsForGeneration({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: researchCost,
+        type: 'research_analysis',
+        note: `Topic research synthesis charge (${researchCost} credits)`,
+      });
+    } catch (creditErr) {
+      return res.status(402).json({
+        success: false,
+        error: `Insufficient credits to run topic research. Cost: ${researchCost} credits.`,
+      });
     }
 
     // 2. Synthesize using ResearchEngine service
@@ -53,6 +75,15 @@ exports.generateResearch = async (req, res, next) => {
       data: research,
     });
   } catch (error) {
+    if (chargeResult) {
+      await creditService.refundGenerationCredits({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: researchCost,
+        type: 'research_analysis',
+        note: `Refund for failed topic research: ${error.message || 'unknown error'}`,
+      });
+    }
     next(error);
   }
 };

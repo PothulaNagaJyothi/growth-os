@@ -635,7 +635,9 @@ PLATFORM: ${platform || 'General'}`
         ], {
           temperature: 0.7,
           max_completion_tokens: 300,
-          apiVersion: '2024-02-15-preview'
+          apiVersion: '2024-02-15-preview',
+          companyId: company?._id,
+          processType: 'image_prompt_generation'
         });
         if (responseText && responseText.trim().length > 0) {
           return responseText.trim();
@@ -685,7 +687,7 @@ PLATFORM: ${platform || 'General'}`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.7, max_tokens: 300 });
+      ], { temperature: 0.7, max_tokens: 300, companyId: company?._id, processType: 'image_prompt_generation' });
       return responseText.trim();
     } catch (err) {
       console.warn('[AI SERVICE] generateBrandedImagePrompt failed, fallback to default', err.message);
@@ -923,7 +925,7 @@ Generate JSON payload now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.6, max_tokens: 500 });
+      ], { temperature: 0.6, max_tokens: 500, companyId: company?._id, processType: 'market_research' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);
@@ -949,7 +951,7 @@ Generate JSON payload now:`;
   /**
    * Analyze brand logo using Vision to extract color scheme
    */
-  async analyzeLogoColors(imageUrl) {
+  async analyzeLogoColors(imageUrl, companyId = null) {
     let targetImageUrl = imageUrl;
 
     if (imageUrl && imageUrl.startsWith('http')) {
@@ -1023,7 +1025,9 @@ Do not output any markdown code blocks, backticks, or extra text. Just raw JSON.
       ], {
         temperature: 0.2,
         max_completion_tokens: 150,
-        apiVersion: '2024-02-15-preview'
+        apiVersion: '2024-02-15-preview',
+        companyId,
+        processType: 'logo_color_analysis'
       });
       
       let cleanText = responseText.trim();
@@ -1123,7 +1127,7 @@ Extract Company and Persona details and return raw JSON now:`;
       const responseText = await this.queryAI([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ], { temperature: 0.2, max_tokens: 2000, companyId, processType: 'market_research' });
+      ], { temperature: 0.2, max_tokens: 2000, companyId, processType: 'brand_persona_extraction' });
 
       let cleanText = responseText.trim();
       if (cleanText.startsWith('\`\`\`')) {

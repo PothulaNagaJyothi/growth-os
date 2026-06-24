@@ -5,6 +5,7 @@ const User = require('../models/User');
 const storageService = require('../services/storageService');
 const textExtractor = require('../services/textExtractor');
 const aiService = require('../services/aiService');
+const creditService = require('../services/creditService');
 const logger = require('../utils/logger');
 const axios = require('axios');
 
@@ -361,6 +362,8 @@ const cleanHtmlToText = (html) => {
 // @route   POST /api/knowledge/crawl
 // @access  Private
 exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
+  let chargeResult = null;
+  let crawlCost = 5;
   try {
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, error: 'No company profile associated with this user context' });
@@ -375,6 +378,26 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
     let targetUrl = url.trim();
     if (!/^https?:\/\//i.test(targetUrl)) {
       targetUrl = `https://${targetUrl}`;
+    }
+
+    // Fetch credit settings
+    const creditSettings = await creditService.getCreditSettings();
+    crawlCost = creditSettings.websiteAnalysisCost || 5;
+
+    // Charge credits
+    try {
+      chargeResult = await creditService.chargeCreditsForGeneration({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: crawlCost,
+        type: 'crawling_analysis',
+        note: `Website crawl & analysis charge (${crawlCost} credits)`,
+      });
+    } catch (creditErr) {
+      return res.status(402).json({
+        success: false,
+        error: `Insufficient credits to analyze website. Cost: ${crawlCost} credits.`,
+      });
     }
 
     logger.info(`Starting website crawling for URL: ${targetUrl}`);
@@ -392,6 +415,15 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
       htmlContent = response.data;
     } catch (crawlErr) {
       logger.error(`Website crawl failed for URL ${targetUrl}: ${crawlErr.message}`);
+      if (chargeResult) {
+        await creditService.refundGenerationCredits({
+          companyId: req.user.companyId,
+          userId: req.user._id,
+          amount: crawlCost,
+          type: 'crawling_analysis',
+          note: 'Refund for failed website analysis (network error)',
+        });
+      }
       return res.status(400).json({
         success: false,
         error: `Failed to crawl website URL. Details: ${crawlErr.message}`
@@ -401,6 +433,15 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
     // 2. Extract clean text
     const extractedText = cleanHtmlToText(htmlContent);
     if (!extractedText || extractedText.length < 100) {
+      if (chargeResult) {
+        await creditService.refundGenerationCredits({
+          companyId: req.user.companyId,
+          userId: req.user._id,
+          amount: crawlCost,
+          type: 'crawling_analysis',
+          note: 'Refund for failed website analysis (insufficient text content)',
+        });
+      }
       return res.status(400).json({
         success: false,
         error: 'The crawled website did not return sufficient readable text content to analyze.'
@@ -466,7 +507,7 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
             
             // Vision analysis on the uploaded Cloudinary logo
             logger.info(`Extracting brand colors from Cloudinary logo URL...`);
-            const colorAnalysis = await aiService.analyzeLogoColors(logoUrl);
+            const colorAnalysis = await aiService.analyzeLogoColors(logoUrl, req.user.companyId);
             if (colorAnalysis && colorAnalysis.colors && colorAnalysis.colors.length > 0) {
               brandColors = colorAnalysis.colors;
               brandColorsDescription = colorAnalysis.description || '';
@@ -556,6 +597,15 @@ exports.crawlWebsiteAndExtractBrand = async (req, res, next) => {
       }
     });
   } catch (error) {
+    if (chargeResult) {
+      await creditService.refundGenerationCredits({
+        companyId: req.user.companyId,
+        userId: req.user._id,
+        amount: crawlCost,
+        type: 'crawling_analysis',
+        note: 'Refund for failed website analysis (general failure)',
+      });
+    }
     next(error);
   }
 };
